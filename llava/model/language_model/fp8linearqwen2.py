@@ -41,18 +41,23 @@ from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
 from transformers.models.qwen2.modeling_qwen2 import (
     Qwen2Attention,
     Qwen2DecoderLayer,
-    Qwen2FlashAttention2,
     Qwen2ForCausalLM,
     Qwen2MLP,
     Qwen2Model,
     Qwen2PreTrainedModel,
     Qwen2RMSNorm,
     Qwen2RotaryEmbedding,
-    Qwen2SdpaAttention,
     apply_rotary_pos_emb,
     repeat_kv,
     rotate_half,
 )
+
+# NOTE(Zhouenshen): Add the Qwen2MOE model from modeling_qwen2_moe instead of modeling_qwen2
+from transformers.models.qwen2_moe.modeling_qwen2_moe import (
+    Qwen2MoeFlashAttention2,
+    Qwen2MoeSdpaAttention,
+)
+
 from transformers.utils import (
     add_start_docstrings,
     add_start_docstrings_to_model_forward,
@@ -204,7 +209,7 @@ class FP8LinearQwen2FlashAttention2(FP8LinearQwen2Attention):
         # Beware that with flash_attn<2.1, using q_seqlen != k_seqlen (except for the case q_seqlen == 1) produces a wrong mask (top-left).
         self._flash_attn_uses_top_left_mask = not is_flash_attn_greater_or_equal_2_10()
 
-    forward = Qwen2FlashAttention2.forward
+    forward = Qwen2MoeFlashAttention2.forward
 
 
 # Copied from transformers.models.mixtral.modeling_mixtral.MixtralSdpaAttention with Mixtral->Qwen2
@@ -216,7 +221,7 @@ class FP8LinearQwen2SdpaAttention(FP8LinearQwen2Attention):
     """
 
     # Adapted from Qwen2Attention.forward
-    forward = Qwen2SdpaAttention.forward
+    forward = Qwen2MoeSdpaAttention.forward
 
 
 FP8LINEARQWEN2_ATTENTION_CLASSES = {

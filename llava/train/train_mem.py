@@ -37,6 +37,8 @@ def __iter__(self):
 
 
 if __name__ == "__main__":
+    # NOTE(Zhouenshen): Disable wandb if you don't want to use it
+    # import os; os.environ["WANDB_MODE"] = "offline"
     with (
         mock.patch("transformers.image_processing_utils.normalize", new=patched_normalize),
         mock.patch("accelerate.data_loader.BatchSamplerShard.__len__", new=__len__),

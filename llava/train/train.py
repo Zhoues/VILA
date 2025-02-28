@@ -749,7 +749,10 @@ def train():
     )
 
     # Add a training step_end callback to check whether to autosuspend.
-    callbacks = [AutoResumeCallback(), TimeoutTerminateCallback()]
+    # callbacks = [AutoResumeCallback(), TimeoutTerminateCallback()]
+    
+    # NOTE(Zhouenshen): Remove the TimeoutTerminateCallback
+    callbacks = [AutoResumeCallback()]
 
     if training_args.dpo:
         ref_model = model_cls(

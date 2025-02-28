@@ -69,6 +69,11 @@ def build_llm_and_tokenizer(
     *args,
     **kwargs,
 ) -> Tuple[PreTrainedModel, PreTrainedTokenizer]:
+    
+    # NOTE(Zhouenshen): Register the Qwen2VLForConditionalGeneration model
+    from transformers import AutoModelForCausalLM, Qwen2VLConfig, Qwen2VLForConditionalGeneration
+    AutoModelForCausalLM.register(config_class=Qwen2VLConfig, model_class=Qwen2VLForConditionalGeneration)
+
     # print(model_name_or_path)
     llm_cfg = AutoConfig.from_pretrained(model_name_or_path)
     llm_cfg._attn_implementation = attn_implementation
