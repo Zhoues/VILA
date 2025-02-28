@@ -9,3 +9,6 @@
 *.pyz
 *.pywz
 *.log
+
+ckpt/
+*.sh
