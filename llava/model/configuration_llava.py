@@ -28,6 +28,7 @@ class LlavaConfig(PretrainedConfig):
         vision_tower_cfg=None,
         mm_projector_cfg=None,
         architectures=None,
+        enable_depth=None,
         resume_path=None,
         hidden_size=None,
         mm_hidden_size=None,
@@ -62,6 +63,8 @@ class LlavaConfig(PretrainedConfig):
         self.mm_projector_cfg = mm_projector_cfg
         self.resume_path = resume_path
 
+        # NOTE(Zhouenshen): Add depth configuration in llava config
+        self.enable_depth = enable_depth
         self.hidden_size = hidden_size
         self.mm_hidden_size = mm_hidden_size
         self.image_aspect_ratio = image_aspect_ratio

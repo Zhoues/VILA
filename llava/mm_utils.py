@@ -435,6 +435,93 @@ def dynamic_s2_process_images_and_prompt(images, prompt, data_args, image_folder
         all_images = None
     return all_images, all_block_size
 
+def dynamic_s2_process_depths_and_prompt(depths, prompt, data_args, depth_folder=None):
+    idx = 0
+    all_depths = []
+    all_block_size = []
+    for depth in depths:
+        processed_depths, block_size = process_depth(depth, data_args, depth_folder, enable_dynamic_s2=True)
+        all_depths.append(processed_depths)
+        all_block_size.append(block_size)
+        idx += 2
+    if all_depths:
+        all_depths = torch.cat(all_depths)
+    else:
+        all_depths = None
+    return all_depths, all_block_size
+
+
+def process_depth(
+        depth_file, data_args, depth_folder, enable_dynamic_res=False, enable_dynamic_s2=False, max_tiles=None
+):
+    processor = data_args.image_processor
+    if isinstance(depth_file, str):
+        if depth_folder is not None:
+            depth = Image.open(os.path.join(depth_folder, depth_file))
+        else:
+            depth = Image.open(depth_file)
+    else:
+        # image is stored in bytearray
+        depth = depth_file
+
+
+    if hasattr(data_args.image_processor, "crop_size"):
+        # CLIP vision tower
+        crop_size = data_args.image_processor.crop_size
+    else:
+        # SIGLIP vision tower
+        assert hasattr(data_args.image_processor, "size")
+        crop_size = data_args.image_processor.size
+    
+
+    if "dynamic_s2" in data_args.image_aspect_ratio and enable_dynamic_s2:
+        assert crop_size["height"] == crop_size["width"]
+        depths, block_size = dynamic_s2_preprocess(
+            depth, s2_scales=data_args.s2_scales, max_num=data_args.max_tiles, image_size=crop_size["height"]
+        )
+        depths = [processor.preprocess(depth, return_tensors="pt")["pixel_values"][0] for depth in depths]
+        return torch.stack(depths), block_size
+    
+    if "dynamic" in data_args.image_aspect_ratio and enable_dynamic_res:
+        assert crop_size["height"] == crop_size["width"]
+        if max_tiles is not None:
+            max_num = max_tiles
+        else:
+            max_num = data_args.max_tiles
+        depths = dynamic_preprocess(depth, min_num=data_args.min_tiles, max_num=max_num, image_size=crop_size["height"])
+        depths = [processor.preprocess(depth, return_tensors="pt")["pixel_values"][0] for depth in depths]
+        return torch.stack(depths)
+
+
+    if data_args.image_aspect_ratio == "resize":
+        depth = depth.resize((crop_size["height"], crop_size["width"]))
+
+    if data_args.image_aspect_ratio == "pad":
+
+        def expand2square(pil_img, background_color):
+            width, height = pil_img.size
+            if width == height:
+                return pil_img
+            elif width > height:
+                result = Image.new(pil_img.mode, (width, width), background_color)
+                result.paste(pil_img, (0, (width - height) // 2))
+                return result
+            else:
+                result = Image.new(pil_img.mode, (height, height), background_color)
+                result.paste(pil_img, ((height - width) // 2, 0))
+                return result
+
+        depth = expand2square(depth, tuple(int(x * 255) for x in processor.image_mean))
+        depth = processor.preprocess(depth, return_tensors="pt")["pixel_values"][0]
+    else:
+        # Using default behavior of the vision encoder
+        # For CLIP, default is central crop
+        # For Radio, default is central crop
+        # For Siglip, default is resize
+        # For InternVIT, default is resize
+        depth = processor.preprocess(depth, return_tensors="pt")["pixel_values"][0]
+    return depth
+
 
 def process_image(
     image_file, data_args, image_folder, enable_dynamic_res=False, enable_dynamic_s2=False, max_tiles=None

@@ -39,8 +39,10 @@ from llava.constants import DEFAULT_IMAGE_TOKEN, IGNORE_INDEX
 from llava.data.collate import DataCollator
 from llava.mm_utils import (
     dynamic_process_images_and_prompt,
+    dynamic_s2_process_depths_and_prompt,
     dynamic_s2_process_images_and_prompt,
     opencv_extract_frames,
+    process_depth,
     process_image,
     tokenizer_image_token,
 )
@@ -58,27 +60,124 @@ PIL.Image.MAX_IMAGE_PIXELS = 1000000000
 
 
 def preprocess_multimodal(sources: Sequence[str], data_args: DataArguments) -> Dict:
+    
+    # whether to train the vision tower with multimodal data
     is_multimodal = data_args.is_multimodal
+
+    # no need to preprocess multimodal data
     if not is_multimodal:
         return sources
 
+    # sources 是一个列表, 长度为 1
+    # [[
+    #     {
+    #         "from": "human",
+    #         "value": "Which of these states is farthest north?\nContext: N/A\nOptions: (A) West Virginia (B) Louisiana (C) Arizona (D) Oklahoma\n<image>"
+    #     },
+    #     {
+    #         "from": "gpt",
+    #         "value": "Maps have four cardinal directions, or main directions. Those directions are north, south, east, and west.\nA compass rose is a set of arrows that point to the cardinal directions. A compass rose usually shows only the first letter of each cardinal direction.\nThe north arrow points to the North Pole. On most maps, north is at the top of the map. To find the answer, look at the compass rose. Look at which way the north arrow is pointing. West Virginia is farthest north. The answer is A."
+    #     }
+    # ]]
+
+    # 依次处理 sources 里的每个子列表，子列表包含 human 和 gpt 的对话
     for source in sources:
+        # source = [
+        #     {"from": "human", "value": "Hello <image>"},
+        #     {"from": "gpt", "value": "This is a response."}
+        # ]
+        # 提取 source 里所有字典的 "value" 字段，并合并成一个字符串 concat_values，即提取所有对话内容
+        # concat_values = "Hello <image>This is a response."
         concat_values = "".join([sentence["value"] for sentence in source])
+
+        # 遍历 source 里的每个字典，处理每个字典的 "value" 字段
         for sid, sentence in enumerate(source):
-            # In multimodal conversations, we automatically prepend '<image>' at the start of the first sentence if it doesn't already contain one.
+            # 如果 DEFAULT_IMAGE_TOKEN 不在 concat_values 中，并且当前是第一条消息
             if sid == 0 and DEFAULT_IMAGE_TOKEN not in concat_values:
+                # 在 sentence["value"] 前面加上 "DEFAULT_IMAGE_TOKEN\n"
                 sentence["value"] = f"{DEFAULT_IMAGE_TOKEN}\n" + sentence["value"]
+
+            # 如果 sentence["value"] 里包含 DEFAULT_IMAGE_TOKEN（即 "<image>"），则进行格式修正
             if DEFAULT_IMAGE_TOKEN in sentence["value"]:
+                # 将 sentence["value"] 按 DEFAULT_IMAGE_TOKEN 分割成多个句子。
+                # 让 "<image>" 后面的文本适当地加一个空格，确保格式正确。
                 sentence_chunks = [chunk.strip() for chunk in sentence["value"].split(DEFAULT_IMAGE_TOKEN)]
                 sentence_chunks = [
                     chunk + " " if not (chunk.endswith("\n")) else chunk for chunk in sentence_chunks[:-1]
                 ] + [sentence_chunks[-1]]
                 sentence["value"] = f"{DEFAULT_IMAGE_TOKEN}\n".join(sentence_chunks).strip()
+                # sentence["value"] = "Hello<image>World" -> "<image>\nHello World"
+
+            # 进一步确保 DEFAULT_IMAGE_TOKEN 后面只有一个 \n
             # ensure every DEFAULT_IMAGE_TOKEN is followed by a newline character.
             # If it has one already, we don't add another one.
             if DEFAULT_IMAGE_TOKEN in sentence["value"]:
                 sentence["value"] = sentence["value"].replace(DEFAULT_IMAGE_TOKEN, f"{DEFAULT_IMAGE_TOKEN}\n")
                 sentence["value"] = sentence["value"].replace(f"{DEFAULT_IMAGE_TOKEN}\n\n", f"{DEFAULT_IMAGE_TOKEN}\n")
+
+    return sources
+
+
+def preprocess_rgbd(sources: Sequence[str], data_args: DataArguments) -> Dict:
+    """
+    Preprocesses conversations that may contain RGB-D tokens in the form "<image> <depth>\n".
+    The goal is to move all occurrences of "<image> <depth>\n" (with exactly one space,
+    and ending in a newline) to the beginning of the message value, in the order they
+    originally appeared, followed by the remaining text.
+
+    For example:
+      1) "<image> <depth>\nWhat is the distance between A and B?"
+         becomes:
+         "<image> <depth>\nWhat is the distance between A and B?"
+
+      2) "What is the distance between A and B?<image> <depth>\n"
+         becomes:
+         "<image> <depth>\nWhat is the distance between A and B?"
+
+      3) "<image> <depth>\n<image> <depth>\n How does the distance change..."
+         becomes:
+         "<image> <depth>\n<image> <depth>\nHow does the distance change..."
+
+      4) "<image> <depth>\n How does the distance change ... <image> <depth>\n"
+         becomes:
+         "<image> <depth>\n<image> <depth>\nHow does the distance change ..."
+
+    If `data_args` does not specify an RGB-D scenario, this function simply returns `sources` unchanged.
+    """
+
+    # whether to train the vision tower with multimodal data
+    is_multimodal = data_args.is_multimodal
+
+    # no need to preprocess multimodal data
+    if not is_multimodal:
+        return sources
+
+    import re
+    # Regex to capture occurrences of "<image> <depth>\n" with optional extra spaces around <depth> or before \n
+    pattern = re.compile(r"<image>\s*<depth>\s*\n")
+
+    for source in sources:
+        for sentence in source:
+            text = sentence["value"]
+            # Find all matches in the order they appear
+            matches = list(pattern.finditer(text))
+
+            if not matches:
+                # No <image> <depth>\n found; do nothing special
+                continue
+
+            # Remove all occurrences of "<image> <depth>\n" from the text
+            # We strip them out completely, then we'll prepend them all at the start
+            body_text = pattern.sub("", text).strip()
+
+            # Build a prefix containing all "<image> <depth>\n" (in the order found)
+            # ensuring exactly one space between <image> and <depth>, and exactly one \n after <depth>
+            prefix = ""
+            for _ in matches:
+                prefix += "<image> <depth>\n"
+
+            # Combine and update in sentence
+            sentence["value"] = (prefix + body_text).strip()
 
     return sources
 
@@ -1259,6 +1358,142 @@ class LazyVideoWebDataset(Dataset):
 
         return data_dict
 
+
+# NOTE(Zhouenshen): SpatialDataset for single image with depth
+class LazySupervisedSpatialDataset(Dataset):
+    def __init__(
+        self,
+        data_path: str,
+        image_folder: str,
+        tokenizer: transformers.PreTrainedTokenizer,
+        data_args: DataArguments,
+        training_args: TrainingArguments,
+    ):
+        
+        super().__init__()
+        warnings.warn("Loading SpatialDataset data...")
+
+        # load the conversation data from *.json
+        with open(data_path) as f:
+            list_data_dict = json.load(f)
+
+        print("Total SpatialRGPT Samples ", len(list_data_dict), " ", data_path)
+        warnings.warn("Formatting inputs...Skip in lazy mode")
+
+        self.tokenizer = tokenizer
+        self.list_data_dict = list_data_dict
+        self.data_args = data_args
+        self.image_folder = image_folder
+        self.depth_folder = data_args.depth_path
+
+    def __len__(self):
+        return len(self.list_data_dict)
+
+    @property
+    def lengths(self):
+        length_list = []
+        for sample in self.list_data_dict:
+            img_tokens = 128 if "image" in sample else 0
+            length_list.append(sum(len(conv["value"].split()) for conv in sample["conversations"]) + img_tokens)
+        return length_list
+
+    @property
+    def modality_lengths(self):
+        length_list = []
+        for sample in self.list_data_dict:
+            cur_len = sum(len(conv["value"].split()) for conv in sample["conversations"])
+            cur_len = cur_len if "image" in sample else -cur_len
+            length_list.append(cur_len)
+        return length_list
+
+
+    def __getitem__(self, i) -> Dict[str, torch.Tensor]:
+        sources = self.list_data_dict[i]
+        if isinstance(i, int):
+            sources = [sources]
+        assert len(sources) == 1, "Don't know why it is wrapped to a list"  # FIXME
+
+        enable_dynamic_res = self.data_args.image_aspect_ratio == "dynamic"
+        enable_dynamic_res_s2 = self.data_args.image_aspect_ratio == "dynamic_s2"
+
+        # image_aspect_ratio 不能使用 dynamic
+        assert enable_dynamic_res == False, "SpatialDataset do not need dynamic image"
+
+        if "image" in sources[0]:
+            
+            image_file = self.list_data_dict[i]["image"]
+            depth_file = self.list_data_dict[i]["depth"]
+
+            # process conversations
+            sources = preprocess_rgbd(copy.deepcopy([e["conversations"] for e in sources]), self.data_args)
+
+            # image is a list of images, depth is a list of depths
+            if isinstance(image_file, list):
+                if enable_dynamic_res_s2:
+                    processed_images, block_sizes = dynamic_s2_process_images_and_prompt(
+                        image_file, sources[0][0]["value"], self.data_args, self.image_folder
+                    )
+                    processed_depths, depth_block_sizes = dynamic_s2_process_depths_and_prompt(
+                        depth_file, sources[0][0]["value"], self.data_args, self.depth_folder
+                    )
+                else:
+                    processed_images = torch.stack(
+                        [process_image(img, self.data_args, self.image_folder) for img in image_file]
+                    )
+                    processed_depths = torch.stack(
+                        [process_depth(depth, self.data_args, self.depth_folder) for depth in depth_file]
+                    )
+            else:
+                if enable_dynamic_res_s2:
+                    processed_images, block_sizes = dynamic_s2_process_images_and_prompt(
+                        [image_file], sources[0][0]["value"], self.data_args, self.image_folder
+                    )
+                    processed_depths, depth_block_sizes = dynamic_s2_process_depths_and_prompt(
+                        [depth_file], sources[0][0]["value"], self.data_args, self.depth_folder
+                    )
+                else:
+                    processed_images = process_image(
+                        image_file, self.data_args, self.image_folder
+                    )
+                    processed_depths = process_depth(
+                        depth_file, self.data_args, self.depth_folder
+                    )
+
+        else:
+            raise NotImplementedError("SpaitalDataset need both image and depth")
+        # except:
+        #     print("got bad image or depth...get another one...")
+        #     return self.__getitem__(random.randint(0, len(self.list_data_dict)))
+
+
+        data_dict = preprocess(
+            sources,
+            self.tokenizer,
+            has_image=("image" in self.list_data_dict[i]),
+        )
+
+        if isinstance(i, int):
+            data_dict = dict(input_ids=data_dict["input_ids"][0], labels=data_dict["labels"][0])
+
+
+        # image exist in the data
+        if "image" in self.list_data_dict[i]:
+            if processed_images is None or len(processed_images.shape) == 4:
+                data_dict["image"] = processed_images
+                data_dict["depth"] = processed_depths
+            else:
+                data_dict["image"] = processed_images.unsqueeze(0)
+                data_dict["depth"] = processed_depths.unsqueeze(0)
+            if enable_dynamic_res_s2:
+                data_dict["block_sizes"] = block_sizes
+                data_dict["depth_block_sizes"] = depth_block_sizes
+        else:
+            raise NotImplementedError("SpatialDataset need image")
+
+        # data_dict["image"].shape: [17, 3, 448, 448]
+        # data_dict["depth"].shape: [17, 3, 448, 448]
+
+        return data_dict
 
 class DataCollatorForSupervisedDatasetSeqParallel:
     """Collate examples for supervised fine-tuning.

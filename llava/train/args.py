@@ -201,6 +201,10 @@ class ModelArguments:
     epsilon_optimizer: float = field(default=1e-15)
 
 
+    # NOTE(Zhouenshen): Add depth training or saving ckpt
+    enable_depth: bool = field(default=True)
+
+
 @dataclass
 class TrainingArguments(transformers.TrainingArguments):
     cache_dir: Optional[str] = field(default=None)

@@ -25,10 +25,18 @@ LOGDIR = "."
 IGNORE_INDEX = -100
 DEFAULT_IMAGE_TOKEN = "<image>"
 
+# NOTE(Zhouenshen): Add depth token
+DEFAULT_DEPTH_TOKEN = "<depth>"
+
+# token: ['<|im_start|>', '<|im_end|>', '<vila/sentinel>', '<image>', '<vila/video>', '<depth>']
+# id: [151644, 151645, 151648, 151649, 151650, 151651]
+# "\n": 198
+# " ": 220
+
 SENTINEL_TOKEN = "<vila/sentinel>"
 MEDIA_TOKENS = {
     "image": "<image>",
-    "video": "<vila/video>",
+    "video": "<vila/video>"
 }
 
 

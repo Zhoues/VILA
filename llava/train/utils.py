@@ -94,6 +94,10 @@ def prepare_config_for_training(
     # set default dtype
     config.model_dtype = torch.bfloat16 if training_args.bf16 else torch.float16
     config.model_dtype = config.model_dtype.__str__()
+
+    # NOTE(Zhouenshen): Add depth training
+    config.enable_depth = model_args.enable_depth
+    
     # set tuning modules
     config.tune_language_model = training_args.tune_language_model
     config.tune_vision_tower = training_args.tune_vision_tower

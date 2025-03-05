@@ -25,6 +25,8 @@ class Dataset:
     data_path: str = field(default=None, metadata={"help": "Path to the training data."})
     meta_path: str = field(default=None, metadata={"help": "Path to the meta data for webdataset."})
     image_path: str = field(default=None, metadata={"help": "Path to the training image data."})
+    # NOTE(Zhouenshen): Add the depth path for spatialdataset
+    depth_path: str = field(default=None, metadata={"help": "Path to the training depth data."})
     caption_choice: str = field(default=None, metadata={"help": "Path to the caption directory for recaption."})
     description: str = field(
         default=None,
@@ -53,6 +55,35 @@ def add_dataset(dataset):
 
 
 def register_datasets_mixtures():
-    pass
+
+    llava_1_5_mm_align = Dataset(
+        dataset_name="llava_1_5_mm_align",
+        dataset_type="torch",
+        data_path="/home/zhouenshen/dataset/vlm/LLaVA-CC3M-Pretrain-595K/chat.json",
+        image_path="/home/zhouenshen/dataset/vlm/LLaVA-CC3M-Pretrain-595K/images",
+    )
+    add_dataset(llava_1_5_mm_align)
 
 
+    # NOTE(Zhouenshen): Add the spatialvlm dataset for stage 1
+    openspaces_spacellava_9k = Dataset(
+        dataset_name="openspaces_spacellava_9k",
+        dataset_type="spatialdataset",
+        data_path="/home/zhouenshen/dataset/vlm/openspaces/train/metadata.json",
+        image_path="/home/zhouenshen/dataset/vlm/openspaces/train/images",
+        depth_path="/home/zhouenshen/dataset/vlm/openspaces/train/depths",
+        description="9.2K SFT data by SpatialVLM w/ depth (template) from the Cauldron Dataset."
+    )
+    add_dataset(openspaces_spacellava_9k)
+
+
+    # NOTE(Zhouenshen): Add the spatialvlm dataset for stage 1
+    vqasynth_spacellava_25k = Dataset(
+        dataset_name="vqasynth_spacellava_25k",
+        dataset_type="spatialdataset",
+        data_path="/home/zhouenshen/dataset/vlm/vqasynth/train/metadata.json",
+        image_path="/home/zhouenshen/dataset/vlm/vqasynth/train/images",
+        depth_path="/home/zhouenshen/dataset/vlm/vqasynth/train/depths",
+        description="25.2K SFT data by SpatialVLM w/ depth (template) focusing on warehouse scenes."
+    )
+    add_dataset(vqasynth_spacellava_25k)

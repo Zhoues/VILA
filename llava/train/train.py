@@ -31,7 +31,7 @@ from transformers.modeling_utils import unwrap_model
 import llava.data.dataset as dataset
 import llava.data.datasets_mixture as datasets_mixture
 from llava import conversation as conversation_lib
-from llava.constants import IGNORE_INDEX
+from llava.constants import DEFAULT_DEPTH_TOKEN, IGNORE_INDEX
 from llava.data import make_supervised_data_module
 from llava.mm_utils import process_image
 from llava.model import LlavaLlamaConfig, LlavaLlamaModel
@@ -498,6 +498,8 @@ def train():
 
     ## extra configurations
     prepare_config_for_training(config, model_args, training_args, data_args)
+
+    # NOTE(Zhouenshen): build VLM model
     if model_args.quantize_model in quantize_args_to_model_class.keys():
         model = model_cls(
             config=config,
@@ -708,6 +710,19 @@ def train():
             num_new_tokens = tokenizer.add_tokens([DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN], special_tokens=True)
         assert not model_args.mm_use_im_patch_token
 
+        if model_args.enable_depth:
+            tokenizer.add_tokens([DEFAULT_DEPTH_TOKEN], special_tokens=True)
+            model.resize_token_embeddings(len(tokenizer))
+            
+            # record depth token id
+            vision_tower_cfg = model.get_vision_tower().config
+            vision_tower_cfg.llm_depth_token_id = tokenizer.convert_tokens_to_ids(DEFAULT_DEPTH_TOKEN)
+
+            # record depth token id in media token ids
+            tokenizer.media_token_ids["depth"] = tokenizer.convert_tokens_to_ids(DEFAULT_DEPTH_TOKEN)
+            tokenizer.media_tokens["depth"] = DEFAULT_DEPTH_TOKEN
+            mprint(f"Depth token id: {vision_tower_cfg.llm_depth_token_id}")
+
         model.config.num_time_tokens = data_args.num_time_tokens = model_args.num_time_tokens
         model.config.time_token_format = data_args.time_token_format = model_args.time_token_format
         if model_args.num_time_tokens > 0:
@@ -747,6 +762,8 @@ def train():
         data_args=data_args,
         training_args=training_args,
     )
+
+    # import ipdb; ipdb.set_trace()
 
     # Add a training step_end callback to check whether to autosuspend.
     # callbacks = [AutoResumeCallback(), TimeoutTerminateCallback()]

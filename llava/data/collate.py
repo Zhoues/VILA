@@ -81,10 +81,16 @@ class DataCollator:
         for instance in instances:
             block_sizes.extend(instance.get("block_sizes", [None]))
 
+        # NOTE(Zhouenshen): Add the depth block sizes to the media config.
+        depth_block_sizes = []
+        for instance in instances:
+            depth_block_sizes.extend(instance.get("depth_block_sizes", [None]))
+
+        # NOTE(zhouenshen): Add the depth block sizes to the media config.
         return {
             "input_ids": input_ids,
             "media": media,
-            "media_config": {"image": {"block_sizes": block_sizes}, "video": {}},
+            "media_config": {"image": {"block_sizes": block_sizes}, "video": {}, "depth": {"block_sizes": depth_block_sizes}},
             "labels": labels,
             "attention_mask": attention_mask,
         }

@@ -23,6 +23,8 @@ from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, BitsAn
 from llava.model import LlavaLlamaModel
 from llava.model.utils import is_mm_model
 
+from llava.constants import DEFAULT_DEPTH_TOKEN
+
 
 def load_pretrained_model(
     model_path,
@@ -133,7 +135,22 @@ def load_pretrained_model(
             model = AutoModelForCausalLM.from_pretrained(model_path, low_cpu_mem_usage=True, **kwargs)
     model.eval()
     image_processor = None
+
+
+    
     if is_mm_model(model_path):
+        # NOTE(Zhouenshen): Add Special Token for llm tokenizer and vision tower
+        enable_depth = getattr(model.config, "enable_depth", False)
+        if enable_depth:
+            # 添加 depth token 进入语言模型的 tokenizer
+            tokenizer.add_tokens([DEFAULT_DEPTH_TOKEN], special_tokens=True)
+            # 保存 depth token 的 token_id，方便后续查询
+            vision_tower_cfg = model.get_vision_tower().config
+            vision_tower_cfg.llm_depth_token_id = tokenizer.convert_tokens_to_ids(DEFAULT_DEPTH_TOKEN)
+            # record depth token id in media token ids
+            tokenizer.media_token_ids["depth"] = tokenizer.convert_tokens_to_ids(DEFAULT_DEPTH_TOKEN)
+            tokenizer.media_tokens["depth"] = DEFAULT_DEPTH_TOKEN
+
         model.resize_token_embeddings(len(tokenizer))
         vision_tower = model.get_vision_tower()
         vision_tower.to(device=device, dtype=torch.float16)
