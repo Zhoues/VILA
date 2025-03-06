@@ -143,7 +143,7 @@ def get_mm_adapter_state_maybe_zero_3(named_params, keys_to_match):
     to_return = {k: maybe_zero_3(v, ignore_status=True).cpu() for k, v in to_return.items()}
     return to_return
 
-
+# FIXME(Zhouenshen)
 def find_all_linear_names(model, lora_llm, lora_vt):
     cls = torch.nn.Linear
     lora_module_names = set()
@@ -496,7 +496,7 @@ def train():
         if getattr(config, "resume_path", None) is not None:
             config.resume_path = model_args.model_name_or_path
 
-    ## extra configurations
+    # extra configurations
     prepare_config_for_training(config, model_args, training_args, data_args)
 
     # NOTE(Zhouenshen): build VLM model
@@ -630,6 +630,7 @@ def train():
         model.print_trainable_parameters()
 
     # currently assume fft for mm projector
+    # FIXME(Zhouenshen)
     if training_args.lora_enable:
         if not training_args.lora_llm:
             model.get_llm().requires_grad_(training_args.tune_language_model)
@@ -655,15 +656,22 @@ def train():
             model.get_mm_projector().requires_grad_(training_args.tune_mm_projector)
             mprint(f"vision tower {training_args.tune_vision_tower}")
             mprint(f"mm projector {training_args.tune_mm_projector}")
+        if model.get_depth_tower():
+            model.get_depth_tower().requires_grad_(training_args.tune_depth_tower)
+            mprint(f"depth tower {training_args.tune_depth_tower}")
+        if model.get_depth_projector():
+            model.get_depth_projector().requires_grad_(training_args.tune_depth_projector)
+            mprint(f"depth projector {training_args.tune_depth_projector}")
+
+        if not any(
+            [training_args.tune_language_model, training_args.tune_vision_tower, training_args.tune_mm_projector, training_args.tune_depth_tower, training_args.tune_depth_projector]
+        ):
+            logging.warning("You are not tuning any part of the model. Please check if this is intended.")
+        else:
             trainable_params, all_param = get_nb_trainable_parameters(model)
             print(
                 f"trainable params: {trainable_params:,d} || all params: {all_param:,d} || trainable%: {100 * trainable_params / all_param:.4f}"
             )
-
-        if not any(
-            [training_args.tune_language_model, training_args.tune_vision_tower, training_args.tune_mm_projector]
-        ):
-            logging.warning("You are not tuning any part of the model. Please check if this is intended.")
 
     # @yunhao: tokenizer instantiation is moved into build_llm
     tokenizer = model.tokenizer

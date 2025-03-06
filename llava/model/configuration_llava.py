@@ -28,8 +28,14 @@ class LlavaConfig(PretrainedConfig):
         llm_cfg=None,
         vision_tower_cfg=None,
         mm_projector_cfg=None,
-        architectures=None,
+
+        # NOTE(Zhouenshen): Add depth tower and projector configuration in llava config and whether to use depth tower to process the depth image
         enable_depth=None,
+        depth_tower_cfg=None,
+        depth_projector_cfg=None,
+        use_depth_tower=None,
+
+        architectures=None,
         resume_path=None,
         hidden_size=None,
         mm_hidden_size=None,
@@ -55,6 +61,9 @@ class LlavaConfig(PretrainedConfig):
         time_token_format=None,
         image_encoder: str = '{"_target_": "llava.model.encoders.BasicImageEncoder"}',
         video_encoder: str = '{"_target_": "llava.model.encoders.BasicVideoEncoder"}',
+
+        # NOTE(Zhouenshen): Add depth encoder configuration in llava config
+        depth_encoder: str = '{"_target_": "llava.model.encoders.BasicImageEncoder"}',
         **kwargs,
     ):
         super().__init__()
@@ -66,6 +75,10 @@ class LlavaConfig(PretrainedConfig):
 
         # NOTE(Zhouenshen): Add depth configuration in llava config
         self.enable_depth = enable_depth
+        self.depth_tower_cfg = depth_tower_cfg
+        self.depth_projector_cfg = depth_projector_cfg
+        self.use_depth_tower = use_depth_tower
+
         self.hidden_size = hidden_size
         self.mm_hidden_size = mm_hidden_size
         self.image_aspect_ratio = image_aspect_ratio
@@ -92,6 +105,8 @@ class LlavaConfig(PretrainedConfig):
         self.image_encoder = image_encoder
         self.video_encoder = video_encoder
 
+        # NOTE(Zhouenshen): Add depth encoder in llava config
+        self.depth_encoder = depth_encoder
 
 
 

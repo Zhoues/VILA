@@ -47,7 +47,7 @@ from llava.utils.tokenizer import tokenize_conversation
 class LlavaMetaModel(ABC):
     def init_vlm(self, config, *args, **kwargs):
         # TODO(ligeng): figure out how from_config and from_pretrained works in HF implementation.
-        if hasattr(self, "llm") or hasattr(self, "vision_tower") or hasattr(self, "mm_projector"):
+        if hasattr(self, "llm") or hasattr(self, "vision_tower") or hasattr(self, "mm_projector") or hasattr(self, "depth_tower") or hasattr(self, "depth_projector"):
             # already initialized, skipped
             return
 
@@ -57,10 +57,16 @@ class LlavaMetaModel(ABC):
             config.model_dtype = model_dtype
 
         cfgs = get_model_config(config)
-        if len(cfgs) == 3:
+        if len(cfgs) == 5:
+            llm_cfg, vision_tower_cfg, mm_projector_cfg, depth_tower_cfg, depth_projector_cfg = cfgs
+        elif len(cfgs) == 4:
+            llm_cfg, vision_tower_cfg, mm_projector_cfg, depth_projector_cfg = cfgs
+            depth_tower_cfg = None
+        elif len(cfgs) == 3:
             llm_cfg, vision_tower_cfg, mm_projector_cfg = cfgs
+            depth_tower_cfg, depth_projector_cfg = None, None
         else:
-            raise ValueError("`llm_cfg` `mm_projector_cfg` `vision_tower_cfg` not found in the config.")
+            raise ValueError("`llm_cfg` `mm_projector_cfg` `vision_tower_cfg` `depth_tower_cfg` `depth_projector_cfg` not found in the config.")
 
         # print("Before init in Config")
         # if hasattr(config, "deepspeed") and "mics" in config.deepspeed:
@@ -71,28 +77,44 @@ class LlavaMetaModel(ABC):
         #         self.vision_tower = build_vision_tower(vision_tower_cfg, config)
         #         self.mm_projector = build_mm_projector(mm_projector_cfg, config)
         # else:
+
+        # NOTE(Zhouenshen): build all components of VLM, including LLM, Vision Tower, and MM Projector
         self.llm, self.tokenizer = build_llm_and_tokenizer(llm_cfg, config, *args, **kwargs)
         self.vision_tower = build_vision_tower(vision_tower_cfg, config)
         self.mm_projector = build_mm_projector(mm_projector_cfg, config)
+
         # NOTE(ligeng): for xgrammer init, <image> <vila/video> and <vila/sentinel>
         self.vocab_size = config.llm_cfg["vocab_size"] + NUM_EXTRA_TOKENS
+        if hasattr(config, "enable_depth") and config.enable_depth:
+            self.vocab_size = self.vocab_size + 1
 
-        # XGrammar tokenizer and grammar compiler
-        # lazy init only when specified json output during inference
-        self.grammar_compiler = None
+        # NOTE(Zhouenshen): Load depth tower and projector ckpt if provided
+        if hasattr(config, "enable_depth") and config.enable_depth:
+            self.depth_projector = build_mm_projector(depth_projector_cfg, config)
+        else:
+            self.depth_projector = None
+        if hasattr(config, "use_depth_tower") and config.use_depth_tower:
+            self.depth_tower = build_vision_tower(depth_tower_cfg, config)
+        else:
+            self.depth_tower = None
+
+        # NOTE(Zhouenshen): tune_depth_tower must be set if use_depth_tower is True
+        if hasattr(config, "tune_depth_tower") and config.tune_depth_tower:
+            assert hasattr(config, "use_depth_tower") and config.use_depth_tower, "tune_depth_tower must be set if use_depth_tower is True"
 
         self.encoders = {}
-        for name in ["image", "video"]:
+        for name in ["image", "video", "depth"]:
             config = getattr(self.config, f"{name}_encoder")
             if isinstance(config, str):
                 config = json.loads(config)
+            # NOTE(Zhouenshen): the parent is self, which is LlavaMetaModel
             self.encoders[name] = instantiate(config, parent=self)
 
         self.post_config()
         self.is_loaded = True
 
         assert (
-            self.llm is not None or self.vision_tower is not None or self.mm_projector is not None
+            self.llm is not None or self.vision_tower is not None or self.mm_projector is not None or self.depth_tower is not None or self.depth_projector is not None
         ), "At least one of the components must be instantiated."
 
     @classmethod
@@ -120,10 +142,16 @@ class LlavaMetaModel(ABC):
             config.model_dtype = model_dtype
 
         cfgs = get_model_config(config)
-        if len(cfgs) == 3:
+        if len(cfgs) == 5:
+            llm_cfg, vision_tower_cfg, mm_projector_cfg, depth_tower_cfg, depth_projector_cfg = cfgs
+        elif len(cfgs) == 4:
+            llm_cfg, vision_tower_cfg, mm_projector_cfg, depth_projector_cfg = cfgs
+            depth_tower_cfg = None
+        elif len(cfgs) == 3:
             llm_cfg, vision_tower_cfg, mm_projector_cfg = cfgs
+            depth_tower_cfg, depth_projector_cfg = None, None
         else:
-            raise ValueError("`llm_cfg` `mm_projector_cfg` `vision_tower_cfg` not found in the config.")
+            raise ValueError("`llm_cfg` `mm_projector_cfg` `vision_tower_cfg` `depth_tower_cfg` `depth_projector_cfg` not found in the config.")
 
         # print(llm_cfg, vision_tower_cfg, mm_projector_cfg); input("DEBUG load_pretrained")
         init_context = [
@@ -138,7 +166,7 @@ class LlavaMetaModel(ABC):
             vlm = cls(config, *args, **kwargs)
         # print(llm_cfg, vision_tower_cfg, mm_projector_cfg); input("DEBUG load_pretrained finish")
 
-        if hasattr(vlm, "llm") or hasattr(vlm, "vision_tower") or hasattr(vlm, "mm_projector"):
+        if hasattr(vlm, "llm") or hasattr(vlm, "vision_tower") or hasattr(vlm, "mm_projector") or hasattr(vlm, "depth_tower") or hasattr(vlm, "depth_projector"):
             if vlm.is_loaded:
                 return vlm
 
@@ -146,12 +174,22 @@ class LlavaMetaModel(ABC):
         vlm.vision_tower = build_vision_tower(vision_tower_cfg, config)
         vlm.mm_projector = build_mm_projector(mm_projector_cfg, config)
 
+        # NOTE(Zhouenshen): Add depth tower and projector
+        if hasattr(config, "enable_depth") and config.enable_depth:
+            vlm.depth_projector = build_mm_projector(depth_projector_cfg, config)
+        else:
+            vlm.depth_projector = None
+        if hasattr(config, "use_depth_tower") and config.use_depth_tower:
+            vlm.depth_tower = build_vision_tower(depth_tower_cfg, config)
+        else:
+            vlm.depth_tower = None
+
         self.post_config()
         self.is_loaded = True
 
         # FIXME(ligeng, yunhao): llm should never be none here.
         assert (
-            vlm.llm is not None or vlm.vision_tower is not None or vlm.mm_projector is not None
+            vlm.llm is not None or vlm.vision_tower is not None or vlm.mm_projector is not None or vlm.depth_tower is not None or vlm.depth_projector is not None
         ), "At least one of the components must be instantiated."
         return vlm
 
@@ -199,6 +237,47 @@ class LlavaMetaModel(ABC):
                 state_dict=mm_projector_state_dict,
             )
             self.config.mm_projector_cfg = self.mm_projector.config
+        
+        if self.get_depth_tower():
+            print(f"saving depth_tower to {osp.join(output_dir, 'depth_tower')}")
+            self.depth_tower.config._name_or_path = osp.join(output_dir, "depth_tower")
+            depth_tower_state_dict = OrderedDict(
+                {k.split("depth_tower.vision_tower.")[-1]: v for k, v in state_dict.items() if "depth_tower" in k}
+            )
+            self.depth_tower.vision_tower.save_pretrained(
+                os.path.join(output_dir, "depth_tower"),
+                state_dict=depth_tower_state_dict,
+            )
+            self.depth_tower.image_processor.save_pretrained(os.path.join(output_dir, "depth_tower"))
+            self.config.depth_tower_cfg = self.depth_tower.config
+            if hasattr(self.config.depth_tower_cfg, "auto_map"):
+                if "radio" not in self.get_depth_tower().__class__.__name__.lower():
+                    delattr(self.config.depth_tower_cfg, "auto_map")
+
+        if self.get_depth_projector():
+            print(f"saving depth_projector to {osp.join(output_dir, 'depth_projector')}")
+            self.depth_projector.config._name_or_path = osp.join(output_dir, "depth_projector")
+            depth_projector_state_dict = OrderedDict(
+                {k.split("depth_projector.")[-1]: v for k, v in state_dict.items() if "depth_projector" in k}
+            )
+            self.depth_projector.save_pretrained(
+                os.path.join(output_dir, "depth_projector"),
+                state_dict=depth_projector_state_dict,
+            )
+            self.config.depth_projector_cfg = self.depth_projector.config
+
+
+        # NOTE(Zhouenshen): Add depth for saving ckpt
+        if hasattr(self.config, "enable_depth") and self.config.enable_depth:
+            self.config.enable_depth = True
+        else:
+            self.config.enable_depth = False
+
+        if hasattr(self.config, "use_depth_tower") and self.config.use_depth_tower:
+            self.config.use_depth_tower = True
+        else:
+            self.config.use_depth_tower = False
+
         ## update and save top-level config
         self.config._name_or_path = output_dir
         self.config.architectures = [self.__class__.__name__]
@@ -226,6 +305,18 @@ class LlavaMetaModel(ABC):
             mm_projector = mm_projector[0]
         return mm_projector
 
+    def get_depth_tower(self):
+        depth_tower = getattr(self, "depth_tower", None)
+        if type(depth_tower) is list:
+            depth_tower = depth_tower[0]
+        return depth_tower
+
+    def get_depth_projector(self):
+        depth_projector = getattr(self, "depth_projector", None)
+        if type(depth_projector) is list:
+            depth_projector = depth_projector[0]
+        return depth_projector
+
     def post_config(self):
         self.training = self.get_llm().training
         ## configuration
@@ -235,6 +326,10 @@ class LlavaMetaModel(ABC):
             self.config.vision_tower_cfg = self.vision_tower.config
         if getattr(self.config, "mm_projector_cfg", None) is None:
             self.config.mm_projector_cfg = self.mm_projector.config
+        if getattr(self.config, "depth_tower_cfg", None) is None:
+            self.config.depth_tower_cfg = self.depth_tower.config
+        if getattr(self.config, "depth_projector_cfg", None) is None:
+            self.config.depth_projector_cfg = self.depth_projector.config
 
     def freezed_module_patch(self):
         """
@@ -248,6 +343,12 @@ class LlavaMetaModel(ABC):
                 self.get_vision_tower().eval()
             if self.get_mm_projector() and not getattr(self.config, "tune_mm_projector", False):
                 self.get_mm_projector().eval()
+            
+            # NOTE(Zhouenshen): When depth tower and projector are not used, we need to freeze them
+            if self.get_depth_tower() and not getattr(self.config, "tune_depth_tower", False):
+                self.get_depth_tower().eval()
+            if self.get_depth_projector() and not getattr(self.config, "tune_depth_projector", False):
+                self.get_depth_projector().eval()
 
     @staticmethod
     def merge_chessboard(x, num_split_h, num_split_w):
@@ -292,10 +393,14 @@ class LlavaMetaModel(ABC):
         )
         return x_split
 
-    def merge_features_for_dynamic_s2(self, image_features, block_sizes):
-        scales = self.get_vision_tower().scales
-        resize_output_to_scale_idx = self.get_vision_tower().resize_output_to_scale_idx
-
+    def merge_features_for_dynamic_s2(self, image_features, block_sizes, is_depth: bool = False, use_depth_tower: bool = True):
+        if is_depth and use_depth_tower:
+            scales = self.get_depth_tower().scales
+            resize_output_to_scale_idx = self.get_depth_tower().resize_output_to_scale_idx
+        else:
+            scales = self.get_vision_tower().scales
+            resize_output_to_scale_idx = self.get_vision_tower().resize_output_to_scale_idx
+        
         image_features_each_image = []
         new_block_sizes = []
         block_cnt = 0
@@ -358,12 +463,15 @@ class LlavaMetaModel(ABC):
 
         return image_features_each_image, new_block_sizes
 
-    def encode_images(self, images, block_sizes: Optional[Optional[Tuple[int, ...]]] = None):
+    def encode_images(self, images, block_sizes: Optional[Optional[Tuple[int, ...]]] = None, is_depth: bool = False, use_depth_tower: bool = True):
         if block_sizes is None:
             block_sizes = [None] * len(images)
         if getattr(self.config, "dynamic_s2", False):
-            image_features = self.get_vision_tower()(images)
-            image_features, new_block_sizes = self.merge_features_for_dynamic_s2(image_features, block_sizes)
+            if is_depth and use_depth_tower:
+                image_features = self.get_depth_tower()(images)
+            else:
+                image_features = self.get_vision_tower()(images)
+            image_features, new_block_sizes = self.merge_features_for_dynamic_s2(image_features, block_sizes, is_depth, use_depth_tower)
 
             image_features = [
                 self.split_chessboard(x, block_size[0], block_size[1])
@@ -372,7 +480,12 @@ class LlavaMetaModel(ABC):
             image_features = torch.cat(
                 [rearrange(x, "b c h w -> b (h w) c") for x in image_features], dim=0
             )  # B * N * C
-            image_features = self.get_mm_projector()(image_features)
+
+            if is_depth:
+                image_features = self.get_depth_projector()(image_features)
+            else:
+                image_features = self.get_mm_projector()(image_features)
+
             image_features = list(
                 image_features.split([block_size[0] * block_size[1] for block_size in new_block_sizes], dim=0)
             )
@@ -384,8 +497,14 @@ class LlavaMetaModel(ABC):
             if all([feature.shape[0] == image_features[0].shape[0] for feature in image_features]):
                 image_features = torch.stack(image_features, dim=0)
         else:
-            image_features = self.get_vision_tower()(images)
-            image_features = self.get_mm_projector()(image_features)
+            if is_depth and use_depth_tower:
+                image_features = self.get_depth_tower()(images)
+            else:
+                image_features = self.get_vision_tower()(images)
+            if is_depth:
+                image_features = self.get_depth_projector()(image_features)
+            else:
+                image_features = self.get_mm_projector()(image_features)
         return image_features
 
     ## @yunhao: is there a better way to handle function call and attributes for llm?
@@ -416,9 +535,8 @@ class LlavaMetaForCausalLM(ABC):
         attention_mask = attention_mask if attention_mask is not None else torch.ones_like(input_ids, dtype=torch.bool)
 
         # Extract text and media embeddings
-        text_embeds = self.llm.model.embed_tokens(input_ids)
-        media_embeds = self.__embed_media_tokens(media, media_config)
-
+        text_embeds = self.llm.model.embed_tokens(input_ids)    # Batch * Seq_len * Emb_dim
+        media_embeds = self.__embed_media_tokens(media, media_config)   # Every media type shape: Batch * Patch_num * Emb_dim
         # This is a workaround to make sure the dummy embeddings are consumed
         while media_embeds.get("dummy"):
             dummy_embed = media_embeds["dummy"].popleft()
@@ -430,7 +548,7 @@ class LlavaMetaForCausalLM(ABC):
         labels = [labels[k][attention_mask[k]] for k in range(batch_size)]
 
         # Build inverse mapping from token ID to media name
-        media_tokens = {}
+        media_tokens = {}   # {151649: 'image', 151650: 'video', 151651: 'depth'}
         for name, token_id in self.tokenizer.media_token_ids.items():
             media_tokens[token_id] = name
 
@@ -474,23 +592,38 @@ class LlavaMetaForCausalLM(ABC):
         media: Dict[str, List[torch.Tensor]],
         media_config: Dict[str, Dict[str, Any]],
     ) -> Dict[str, List[torch.Tensor]]:
+        
         embeds = defaultdict(deque)
-        for name in media:
+        use_depth_tower = hasattr(self.config, "use_depth_tower") and self.config.use_depth_tower
+
+        def encode(name, tensors, config, is_depth=False):
+            """Helper function to encode media tensors."""
+            encoder_name = name if is_depth and use_depth_tower else "image" if is_depth else name
+            return self.encoders[encoder_name](tensors, config, is_depth=is_depth, use_depth_tower=use_depth_tower)
+        
+        for name, tensors in media.items():
+            # Preprocess media config
+            config = media_config[name]
+            # NOTE(Zhouenshen): get current media config and filter the None values of the "block_sizes" key, which is a list.
+            config["block_sizes"] = [size for size in config.get("block_sizes", []) if size is not None]
+
             if self.training:
                 # Gather metainfo of media objects from all ranks
-                info = [{"shape": tensor.shape, "dtype": tensor.dtype} for tensor in media.get(name, [])]
-                infos = list(chain(*dist.all_gather(info)))
+                infos = list(chain(*dist.all_gather([{"shape": t.shape, "dtype": t.dtype} for t in tensors])))
 
-                # The entire batch does not contain any media objects of this type.
+                # Skip if there are no media objects of this type in the batch
                 if not infos:
                     continue
 
-                # Create a dummy tensor to ensure the encoder is called, otherwise the training will hang.
-                if not media.get(name):
+                # Create a dummy tensor if the current rank has no media of this type
+                if not tensors:
                     dummy = torch.zeros(infos[0]["shape"], dtype=infos[0]["dtype"], device=self.device)
-                    embeds["dummy"].extend(self.encoders[name]([dummy], media_config[name]))
+                    embeds["dummy"].extend(encode(name, [dummy], config, is_depth=(name == "depth")))
                     continue
-            embeds[name] = deque(self.encoders[name](media[name], media_config[name]))
+
+            # Encode actual media tensors
+            embeds[name] = deque(encode(name, tensors, config, is_depth=(name == "depth")))
+
         return embeds
 
     def __truncate_sequence(

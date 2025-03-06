@@ -91,17 +91,29 @@ def prepare_config_for_training(
         config.vision_tower_cfg = model_args.vision_tower
     if getattr(config, "mm_projector_cfg", None) is None:
         config.mm_projector_cfg = model_args.mm_projector
+    
+    # NOTE(Zhouenshen): Add depth tower and projector configuration
+    if getattr(config, "depth_tower_cfg", None) is None:
+        config.depth_tower_cfg = model_args.depth_tower
+    if getattr(config, "depth_projector_cfg", None) is None:
+        config.depth_projector_cfg = model_args.depth_projector
     # set default dtype
     config.model_dtype = torch.bfloat16 if training_args.bf16 else torch.float16
     config.model_dtype = config.model_dtype.__str__()
 
     # NOTE(Zhouenshen): Add depth training
     config.enable_depth = model_args.enable_depth
-    
+    config.use_depth_tower = model_args.use_depth_tower
+
     # set tuning modules
     config.tune_language_model = training_args.tune_language_model
     config.tune_vision_tower = training_args.tune_vision_tower
     config.tune_mm_projector = training_args.tune_mm_projector
+
+    # NOTE(Zhouenshen): Add depth tower and projector training
+    config.tune_depth_tower = training_args.tune_depth_tower
+    config.tune_depth_projector = training_args.tune_depth_projector
+
     # set data args
     # Get the image_aspect_ratio from the config if is defined there
     # (case of resuming from a checkpoint) or from the data_args
@@ -135,6 +147,14 @@ def vision_resolution_elevation(model: PreTrainedModel, config: PretrainedConfig
         vision_tower._maybe_resize_pos_embeds(
             model=vision_tower.vision_tower,
             image_processor=vision_tower.image_processor,
+            resolution=getattr(config, "vision_resolution", -1),
+            interpolate_mode=getattr(config, "interpolate_mode", "linear"),
+        )
+    depth_tower = model.get_depth_tower()
+    if depth_tower is not None and "radio" not in depth_tower.__class__.__name__.lower():
+        depth_tower._maybe_resize_pos_embeds(
+            model=depth_tower.vision_tower,
+            image_processor=depth_tower.image_processor,
             resolution=getattr(config, "vision_resolution", -1),
             interpolate_mode=getattr(config, "interpolate_mode", "linear"),
         )

@@ -1384,7 +1384,14 @@ class LazySupervisedSpatialDataset(Dataset):
         self.list_data_dict = list_data_dict
         self.data_args = data_args
         self.image_folder = image_folder
-        self.depth_folder = data_args.depth_path
+        
+        # NOTE(Zhouenshen): Add boolean flag to check if depth is enabled. If available, we will use depth data.
+        if self.data_args.depth_path is not None:
+            self.enable_depth = True
+            self.depth_folder = data_args.depth_path
+        else:
+            self.enable_depth = False
+            self.depth_folder = None
 
     def __len__(self):
         return len(self.list_data_dict)
@@ -1430,34 +1437,22 @@ class LazySupervisedSpatialDataset(Dataset):
             # image is a list of images, depth is a list of depths
             if isinstance(image_file, list):
                 if enable_dynamic_res_s2:
-                    processed_images, block_sizes = dynamic_s2_process_images_and_prompt(
-                        image_file, sources[0][0]["value"], self.data_args, self.image_folder
-                    )
-                    processed_depths, depth_block_sizes = dynamic_s2_process_depths_and_prompt(
-                        depth_file, sources[0][0]["value"], self.data_args, self.depth_folder
-                    )
+                    processed_images, block_sizes = dynamic_s2_process_images_and_prompt(image_file, sources[0][0]["value"], self.data_args, self.image_folder)
+                    if self.enable_depth:
+                        processed_depths, depth_block_sizes = dynamic_s2_process_depths_and_prompt(depth_file, sources[0][0]["value"], self.data_args, self.depth_folder)
                 else:
-                    processed_images = torch.stack(
-                        [process_image(img, self.data_args, self.image_folder) for img in image_file]
-                    )
-                    processed_depths = torch.stack(
-                        [process_depth(depth, self.data_args, self.depth_folder) for depth in depth_file]
-                    )
+                    processed_images = torch.stack([process_image(img, self.data_args, self.image_folder) for img in image_file])
+                    if self.enable_depth:
+                        processed_depths = torch.stack([process_depth(depth, self.data_args, self.depth_folder) for depth in depth_file])
             else:
                 if enable_dynamic_res_s2:
-                    processed_images, block_sizes = dynamic_s2_process_images_and_prompt(
-                        [image_file], sources[0][0]["value"], self.data_args, self.image_folder
-                    )
-                    processed_depths, depth_block_sizes = dynamic_s2_process_depths_and_prompt(
-                        [depth_file], sources[0][0]["value"], self.data_args, self.depth_folder
-                    )
+                    processed_images, block_sizes = dynamic_s2_process_images_and_prompt([image_file], sources[0][0]["value"], self.data_args, self.image_folder)
+                    if self.enable_depth:
+                        processed_depths, depth_block_sizes = dynamic_s2_process_depths_and_prompt([depth_file], sources[0][0]["value"], self.data_args, self.depth_folder)
                 else:
-                    processed_images = process_image(
-                        image_file, self.data_args, self.image_folder
-                    )
-                    processed_depths = process_depth(
-                        depth_file, self.data_args, self.depth_folder
-                    )
+                    processed_images = process_image(image_file, self.data_args, self.image_folder)
+                    if self.enable_depth:
+                        processed_depths = process_depth(depth_file, self.data_args, self.depth_folder)
 
         else:
             raise NotImplementedError("SpaitalDataset need both image and depth")
@@ -1480,18 +1475,18 @@ class LazySupervisedSpatialDataset(Dataset):
         if "image" in self.list_data_dict[i]:
             if processed_images is None or len(processed_images.shape) == 4:
                 data_dict["image"] = processed_images
-                data_dict["depth"] = processed_depths
+                if self.enable_depth:
+                    data_dict["depth"] = processed_depths
             else:
                 data_dict["image"] = processed_images.unsqueeze(0)
-                data_dict["depth"] = processed_depths.unsqueeze(0)
+                if self.enable_depth:
+                    data_dict["depth"] = processed_depths.unsqueeze(0)
             if enable_dynamic_res_s2:
                 data_dict["block_sizes"] = block_sizes
-                data_dict["depth_block_sizes"] = depth_block_sizes
+                if self.enable_depth:
+                    data_dict["depth_block_sizes"] = depth_block_sizes
         else:
             raise NotImplementedError("SpatialDataset need image")
-
-        # data_dict["image"].shape: [17, 3, 448, 448]
-        # data_dict["depth"].shape: [17, 3, 448, 448]
 
         return data_dict
 

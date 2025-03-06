@@ -137,7 +137,7 @@ def load_pretrained_model(
     image_processor = None
 
 
-    
+    # FIXME(Zhouenshen)
     if is_mm_model(model_path):
         # NOTE(Zhouenshen): Add Special Token for llm tokenizer and vision tower
         enable_depth = getattr(model.config, "enable_depth", False)
