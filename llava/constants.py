@@ -40,3 +40,5 @@ MEDIA_TOKENS = {
 }
 
 
+# <image> <vila/video> <vila/sentinel>
+NUM_EXTRA_TOKENS = 3
