@@ -18,6 +18,7 @@
 
 import base64
 import os
+import re
 import tempfile
 from io import BytesIO
 
@@ -620,6 +621,32 @@ def get_model_name_from_path(model_path):
         return model_paths[-2] + "_" + model_paths[-1]
     else:
         return model_paths[-1]
+
+
+def process_rgbd_inference_conversation(s):
+    if "<depth>" not in s:
+        return s
+
+    image_count = len(re.findall(r"<image>", s))
+    depth_count = len(re.findall(r"<depth>", s))
+
+    if image_count != depth_count:
+        return "Error: The number of <image> and <depth> tags is not equal."
+
+    pattern = r"(?:<image>|<depth>)+"
+    match = re.match(pattern, s)
+    
+    if match:
+        tags_part = match.group()
+        text_part = s[len(tags_part):]
+    else:
+        return s
+
+    tags_part = tags_part.replace("<image>", "<image>\n").replace("<depth>", "<depth>\n")
+
+    result = tags_part + text_part.lstrip()
+
+    return result
 
 
 class KeywordsStoppingCriteria(StoppingCriteria):

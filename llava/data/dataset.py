@@ -20,6 +20,7 @@ import json
 import os
 import os.path as osp
 import random
+import re
 import time
 import warnings
 from dataclasses import dataclass
@@ -118,66 +119,67 @@ def preprocess_multimodal(sources: Sequence[str], data_args: DataArguments) -> D
     return sources
 
 
-def preprocess_rgbd(sources: Sequence[str], data_args: DataArguments) -> Dict:
+def preprocess_rgbd(sources: Sequence, data_args) -> Dict:
     """
-    Preprocesses conversations that may contain RGB-D tokens in the form "<image> <depth>\n".
-    The goal is to move all occurrences of "<image> <depth>\n" (with exactly one space,
-    and ending in a newline) to the beginning of the message value, in the order they
-    originally appeared, followed by the remaining text.
-
-    For example:
-      1) "<image> <depth>\nWhat is the distance between A and B?"
+    Preprocesses conversations that may contain <image> and <depth> tokens in various positions.
+    
+    New behavior:
+      1. Matches occurrences of "<image>" and "<depth>" in the text. If the token is immediately
+         followed by a newline (i.e. "\n"), then it is considered as "<image>\n" or "<depth>\n".
+      2. Records the count of <image> (or <image>\n) and <depth> (or <depth>\n) tokens respectively,
+         and asserts that their counts are equal.
+      3. Removes from the entire text all occurrences of these tokens.
+      4. Constructs the final text in the standardized format:
+            n * "<image>\n" + n * "<depth>\n" + remaining_text,。
+    
+    Examples:
+      1) "\n<image>\n<depth>\nWhat is the distance between A and B?"
          becomes:
-         "<image> <depth>\nWhat is the distance between A and B?"
-
-      2) "What is the distance between A and B?<image> <depth>\n"
+         "<image>\n<depth>\nWhat is the distance between A and B?"
+    
+      2) "<image>\nWhat is the distance between A and B?<depth>\n\n"
          becomes:
-         "<image> <depth>\nWhat is the distance between A and B?"
-
-      3) "<image> <depth>\n<image> <depth>\n How does the distance change..."
+         "<image>\n<depth>\nWhat is the distance between A and B?"
+    
+      3) "<image>\n<depth>\n<image>\n<depth>\n How does the distance change..."
          becomes:
-         "<image> <depth>\n<image> <depth>\nHow does the distance change..."
-
-      4) "<image> <depth>\n How does the distance change ... <image> <depth>\n"
+         "<image>\n<image>\n<depth>\n<depth>\nHow does the distance change..."
+    
+      4) "\n<image>\n<depth>\n How does the distance change ... <image>\n<depth>\n"
          becomes:
-         "<image> <depth>\n<image> <depth>\nHow does the distance change ..."
-
-    If `data_args` does not specify an RGB-D scenario, this function simply returns `sources` unchanged.
+         "<image>\n<image>\n<depth>\n<depth>\nHow does the distance change ..."
     """
 
-    # whether to train the vision tower with multimodal data
     is_multimodal = data_args.is_multimodal
-
-    # no need to preprocess multimodal data
     if not is_multimodal:
         return sources
 
-    import re
-    # Regex to capture occurrences of "<image> <depth>\n" with optional extra spaces around <depth> or before \n
-    pattern = re.compile(r"<image>\s*<depth>\s*\n")
-
+    pattern_image = re.compile(r"<image>(\n)?")
+    pattern_depth = re.compile(r"<depth>(\n)?")
+    
     for source in sources:
         for sentence in source:
-            text = sentence["value"]
-            # Find all matches in the order they appear
-            matches = list(pattern.finditer(text))
+            original_text = sentence["value"]
 
-            if not matches:
-                # No <image> <depth>\n found; do nothing special
-                continue
+            # 获取两个token的匹配个数，不论是否带换行符
+            image_matches = pattern_image.findall(original_text)
+            depth_matches = pattern_depth.findall(original_text)
+            count_image = len(image_matches)
+            count_depth = len(depth_matches)
+            
+            # 断言 <image> 的个数与 <depth> 的个数一致
+            assert count_image == count_depth, (
+                f"Token count mismatch: {count_image} '<image>' vs {count_depth} '<depth>' in text: {original_text}"
+            )
 
-            # Remove all occurrences of "<image> <depth>\n" from the text
-            # We strip them out completely, then we'll prepend them all at the start
-            body_text = pattern.sub("", text).strip()
+            text_without_tokens = pattern_image.sub("", original_text)
+            text_without_tokens = pattern_depth.sub("", text_without_tokens)
 
-            # Build a prefix containing all "<image> <depth>\n" (in the order found)
-            # ensuring exactly one space between <image> and <depth>, and exactly one \n after <depth>
-            prefix = ""
-            for _ in matches:
-                prefix += "<image> <depth>\n"
+            cleaned_text = text_without_tokens.strip()
 
-            # Combine and update in sentence
-            sentence["value"] = (prefix + body_text).strip()
+            prefix = ("<image>\n" * count_image) + ("<depth>\n" * count_depth)
+            
+            sentence["value"] = prefix + cleaned_text
 
     return sources
 

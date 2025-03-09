@@ -32,7 +32,7 @@ from transformers import AutoConfig, GenerationConfig, LogitsProcessor
 from transformers.modeling_utils import ContextManagers, no_init_weights
 
 from llava.constants import DEFAULT_IMAGE_TOKEN, IGNORE_INDEX, NUM_EXTRA_TOKENS
-from llava.mm_utils import process_image, process_images
+from llava.mm_utils import dynamic_s2_process_depths_and_prompt, dynamic_s2_process_images_and_prompt, process_depth, process_image, process_images, process_rgbd_inference_conversation
 from llava.model.configuration_llava import LlavaConfig, ResponseFormat
 from llava.model.language_model.builder import build_llm_and_tokenizer
 from llava.model.multimodal_encoder.builder import build_vision_tower
@@ -213,8 +213,9 @@ class LlavaMetaModel(ABC):
         if self.get_vision_tower():
             print(f"saving vision_tower to {osp.join(output_dir, 'vision_tower')}")
             self.vision_tower.config._name_or_path = osp.join(output_dir, "vision_tower")
+            # NOTE(Zhouenshen): the key containing vision_tower.vision_tower belongs to the vision_tower
             vision_tower_state_dict = OrderedDict(
-                {k.split("vision_tower.vision_tower.")[-1]: v for k, v in state_dict.items() if "vision_tower" in k}
+                {k.split("vision_tower.vision_tower.")[-1]: v for k, v in state_dict.items() if "vision_tower.vision_tower" in k}
             )
             self.vision_tower.vision_tower.save_pretrained(
                 os.path.join(output_dir, "vision_tower"),
@@ -326,9 +327,9 @@ class LlavaMetaModel(ABC):
             self.config.vision_tower_cfg = self.vision_tower.config
         if getattr(self.config, "mm_projector_cfg", None) is None:
             self.config.mm_projector_cfg = self.mm_projector.config
-        if getattr(self.config, "depth_tower_cfg", None) is None:
+        if getattr(self.config, "depth_tower_cfg", None) is None and self.depth_tower is not None:
             self.config.depth_tower_cfg = self.depth_tower.config
-        if getattr(self.config, "depth_projector_cfg", None) is None:
+        if getattr(self.config, "depth_projector_cfg", None) is None and self.depth_projector is not None:
             self.config.depth_projector_cfg = self.depth_projector.config
 
     def freezed_module_patch(self):
@@ -966,24 +967,48 @@ class LlavaMetaForCausalLM(ABC):
         # Process media
         media_config = defaultdict(dict)
         for name in media:
-            if name == "image":
-                if len(media["image"]) == 1 and self.config.image_aspect_ratio in ["dynamic", "dynamic_s2"]:
-                    self.config.image_processor = self.vision_tower.image_processor
-                    if self.config.image_aspect_ratio == "dynamic":
-                        images = process_image(media["image"][0], self.config, None, enable_dynamic_res=True).half()
-                        conversation[0]["value"] = conversation[0]["value"].replace(
-                            DEFAULT_IMAGE_TOKEN, f"{DEFAULT_IMAGE_TOKEN}\n" * images.shape[0]
-                        )
+            if name in ["image", "depth"]:
+                # if len(media["image"]) == 1 and self.config.image_aspect_ratio in ["dynamic", "dynamic_s2"]:
+                #     self.config.image_processor = self.vision_tower.image_processor
+                #     if self.config.image_aspect_ratio == "dynamic":
+                #         images = process_image(media["image"][0], self.config, None, enable_dynamic_res=True).half()
+                #         conversation[0]["value"] = conversation[0]["value"].replace(
+                #             DEFAULT_IMAGE_TOKEN, f"{DEFAULT_IMAGE_TOKEN}\n" * images.shape[0]
+                #         )
+                #     else:
+                #         if type(self.config.s2_scales) is str:
+                #             self.config.s2_scales = list(map(int, self.config.s2_scales.split(",")))
+                #         images, block_sizes = process_image(
+                #             media["image"][0], self.config, None, enable_dynamic_s2=True
+                #         )
+                #         images = images.half()
+                #         media_config[name]["block_sizes"] = [block_sizes]
+                # else:
+                #     images = process_images(media["image"], self.vision_tower.image_processor, self.config).half()
+                # media[name] = [image for image in images]
+
+                # NOTE(Zhouenshen): process depth and image separately
+                assert self.config.image_aspect_ratio != "dynamic", "Dynamic image is not supported for depth input"
+
+                if self.config.image_aspect_ratio == "dynamic_s2":
+                    if name == "depth" and hasattr(self.config, "use_depth_tower") and self.config.use_depth_tower:
+                        self.config.image_processor = self.depth_tower.image_processor
                     else:
-                        if type(self.config.s2_scales) is str:
-                            self.config.s2_scales = list(map(int, self.config.s2_scales.split(",")))
-                        images, block_sizes = process_image(
-                            media["image"][0], self.config, None, enable_dynamic_s2=True
-                        )
-                        images = images.half()
-                        media_config[name]["block_sizes"] = [block_sizes]
+                        self.config.image_processor = self.vision_tower.image_processor
+
+                    if type(self.config.s2_scales) is str:
+                        self.config.s2_scales = list(map(int, self.config.s2_scales.split(",")))
+                    if name == "image":
+                        images, block_sizes = dynamic_s2_process_images_and_prompt(images=media["image"], prompt=None, data_args=self.config, image_folder=None)
+                    else:
+                        images, block_sizes = dynamic_s2_process_depths_and_prompt(depths=media["depth"], prompt=None, data_args=self.config, depth_folder=None)
+                    images = images.half()
+                    media_config[name]["block_sizes"] = block_sizes
                 else:
-                    images = process_images(media["image"], self.vision_tower.image_processor, self.config).half()
+                    if name == "image":
+                        images = torch.stack([process_image(image_file=img, data_args= self.config, image_folder=None) for img in media["image"]]).half()
+                    else:
+                        images = torch.stack([process_depth(depth_file=img, data_args= self.config, depth_folder=None) for img in media["depth"]]).half()
                 media[name] = [image for image in images]
             elif name == "video":
                 media[name] = [
@@ -992,6 +1017,9 @@ class LlavaMetaForCausalLM(ABC):
                 ]
             else:
                 raise ValueError(f"Unsupported media type: {name}")
+
+        for conv in conversation:
+            conv["value"] = process_rgbd_inference_conversation(conv["value"])
 
         # Tokenize the conversation
         input_ids = tokenize_conversation(conversation, self.tokenizer, add_generation_prompt=True).cuda().unsqueeze(0)

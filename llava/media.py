@@ -1,4 +1,4 @@
-__all__ = ["Media", "File", "Image", "Video"]
+__all__ = ["Media", "File", "Image", "Video", "Depth"]
 
 
 class Media:
@@ -17,4 +17,6 @@ class Image(File):
 class Video(File):
     pass
 
-
+# NOTE(Zhouenshen): Depth is a special file that contains depth information
+class Depth(File):
+    pass

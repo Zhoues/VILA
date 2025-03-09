@@ -40,10 +40,10 @@ class BasicVideoEncoder(BaseEncoder):
             features = torch.cat([features, end_embeds], dim=1)
         return features.flatten(0, 1)
 
-    def forward(self, videos: List[torch.Tensor], config: Dict[str, Any]) -> List[torch.Tensor]:
+    def forward(self, videos: List[torch.Tensor], config: Dict[str, Any], is_depth: bool = False, use_depth_tower: bool = True) -> List[torch.Tensor]:
         num_frames = [video.shape[0] for video in videos]
         images = torch.cat(videos, dim=0)
-        features = self.parent.encode_images(images)
+        features = self.parent.encode_images(images, is_depth=is_depth, use_depth_tower=use_depth_tower)
         features = torch.split(features, num_frames)
         process_features = partial(
             self._process_features,

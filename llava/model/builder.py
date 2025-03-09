@@ -137,14 +137,13 @@ def load_pretrained_model(
     image_processor = None
 
 
-    # FIXME(Zhouenshen)
     if is_mm_model(model_path):
         # NOTE(Zhouenshen): Add Special Token for llm tokenizer and vision tower
         enable_depth = getattr(model.config, "enable_depth", False)
         if enable_depth:
-            # 添加 depth token 进入语言模型的 tokenizer
-            tokenizer.add_tokens([DEFAULT_DEPTH_TOKEN], special_tokens=True)
-            # 保存 depth token 的 token_id，方便后续查询
+            if DEFAULT_DEPTH_TOKEN not in tokenizer.get_vocab():
+                tokenizer.add_tokens([DEFAULT_DEPTH_TOKEN], special_tokens=True)
+                
             vision_tower_cfg = model.get_vision_tower().config
             vision_tower_cfg.llm_depth_token_id = tokenizer.convert_tokens_to_ids(DEFAULT_DEPTH_TOKEN)
             # record depth token id in media token ids
@@ -158,6 +157,15 @@ def load_pretrained_model(
         mm_projector = model.get_mm_projector()
         mm_projector.to(device=device, dtype=torch.float16)
         # mm_projector.to(device=device, dtype=torch.bfloat16)
+
+        if model.get_depth_tower() is not None:
+            depth_tower = model.get_depth_tower()
+            depth_tower.to(device=device, dtype=torch.float16)
+        
+        if model.get_depth_projector() is not None:
+            depth_projector = model.get_depth_projector()
+            depth_projector.to(device=device, dtype=torch.float16)
+
         image_processor = vision_tower.image_processor
 
     if hasattr(model.llm.config, "max_sequence_length"):

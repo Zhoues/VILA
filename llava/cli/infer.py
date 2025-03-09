@@ -8,7 +8,7 @@ from termcolor import colored
 
 import llava
 from llava import conversation as clib
-from llava.media import Image, Video
+from llava.media import Image, Video, Depth
 from llava.model.configuration_llava import JsonSchemaResponseFormat, ResponseFormat
 
 
@@ -32,6 +32,7 @@ def main() -> None:
     parser.add_argument("--conv-mode", "-c", type=str, default="auto")
     parser.add_argument("--text", type=str)
     parser.add_argument("--media", type=str, nargs="+")
+    parser.add_argument("--depth", type=str, nargs="+")
     parser.add_argument("--json-mode", action="store_true")
     parser.add_argument("--json-schema", type=str, default=None)
     args = parser.parse_args()
@@ -63,6 +64,15 @@ def main() -> None:
             else:
                 raise ValueError(f"Unsupported media type: {media}")
             prompt.append(media)
+    
+    # NOTE(Zhouenshen): Support depth input
+    if args.depth is not None:
+        for depth in args.depth or []:
+            if any(depth.endswith(ext) for ext in [".png", ".jpg", ".jpeg"]):
+                depth = Depth(depth)
+            else:
+                raise ValueError(f"Unsupported depth type: {depth}")
+            prompt.append(depth)
     if args.text is not None:
         prompt.append(args.text)
 

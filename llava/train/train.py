@@ -719,9 +719,9 @@ def train():
         assert not model_args.mm_use_im_patch_token
 
         if model_args.enable_depth:
-            tokenizer.add_tokens([DEFAULT_DEPTH_TOKEN], special_tokens=True)
-            model.resize_token_embeddings(len(tokenizer))
             
+            if DEFAULT_DEPTH_TOKEN not in tokenizer.get_vocab():
+                tokenizer.add_tokens([DEFAULT_DEPTH_TOKEN], special_tokens=True)
             # record depth token id
             vision_tower_cfg = model.get_vision_tower().config
             vision_tower_cfg.llm_depth_token_id = tokenizer.convert_tokens_to_ids(DEFAULT_DEPTH_TOKEN)
@@ -731,6 +731,7 @@ def train():
             tokenizer.media_tokens["depth"] = DEFAULT_DEPTH_TOKEN
             mprint(f"Depth token id: {vision_tower_cfg.llm_depth_token_id}")
 
+        model.resize_token_embeddings(len(tokenizer))
         model.config.num_time_tokens = data_args.num_time_tokens = model_args.num_time_tokens
         model.config.time_token_format = data_args.time_token_format = model_args.time_token_format
         if model_args.num_time_tokens > 0:
