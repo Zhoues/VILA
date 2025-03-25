@@ -56,34 +56,77 @@ def add_dataset(dataset):
 
 def register_datasets_mixtures():
 
-    llava_1_5_mm_align = Dataset(
-        dataset_name="llava_1_5_mm_align",
-        dataset_type="torch",
-        data_path="/home/zhouenshen/dataset/vlm/LLaVA-CC3M-Pretrain-595K/chat.json",
-        image_path="/home/zhouenshen/dataset/vlm/LLaVA-CC3M-Pretrain-595K/images",
-    )
-    add_dataset(llava_1_5_mm_align)
+    # llava_1_5_mm_align = Dataset(
+    #     dataset_name="llava_1_5_mm_align",
+    #     dataset_type="torch",
+    #     data_path="/home_sfs/zhouenshen/dataset/vlm/LLaVA-CC3M-Pretrain-595K/chat.json",
+    #     image_path="/home_sfs/zhouenshen/dataset/vlm/LLaVA-CC3M-Pretrain-595K/images",
+    # )
+    # add_dataset(llava_1_5_mm_align)
 
 
     # NOTE(Zhouenshen): Add the spatialvlm dataset for stage 1
-    openspaces_spacellava_9k = Dataset(
-        dataset_name="openspaces_spacellava_9k",
-        dataset_type="spatialdataset",
-        data_path="/home/zhouenshen/dataset/vlm/openspaces/train/metadata.json",
-        image_path="/home/zhouenshen/dataset/vlm/openspaces/train/images",
-        depth_path="/home/zhouenshen/dataset/vlm/openspaces/train/depths",
-        description="9.2K SFT data by SpatialVLM w/ depth (template) from the Cauldron Dataset."
-    )
-    add_dataset(openspaces_spacellava_9k)
+    # openspaces_spacellava_9k = Dataset(
+    #     dataset_name="openspaces_spacellava_9k",
+    #     dataset_type="spatialdataset",
+    #     data_path="/home_sfs/zhouenshen/dataset/vlm/openspaces/train/metadata.json",
+    #     image_path="/home_sfs/zhouenshen/dataset/vlm/openspaces/train/images",
+    #     depth_path="/home_sfs/zhouenshen/dataset/vlm/openspaces/train/depths",
+    #     description="9.2K SFT data by SpatialVLM w/ depth (template) from the Cauldron Dataset."
+    # )
+    # add_dataset(openspaces_spacellava_9k)
 
 
     # NOTE(Zhouenshen): Add the spatialvlm dataset for stage 1
-    vqasynth_spacellava_25k = Dataset(
-        dataset_name="vqasynth_spacellava_25k",
+    # vqasynth_spacellava_25k = Dataset(
+    #     dataset_name="vqasynth_spacellava_25k",
+    #     dataset_type="spatialdataset",
+    #     data_path="/home_sfs/zhouenshen/dataset/vlm/vqasynth/train/metadata.json",
+    #     image_path="/home_sfs/zhouenshen/dataset/vlm/vqasynth/train/images",
+    #     depth_path="/home_sfs/zhouenshen/dataset/vlm/vqasynth/train/depths",
+    #     description="25.2K SFT data by SpatialVLM w/ depth (template) focusing on warehouse scenes."
+    # )
+    # add_dataset(vqasynth_spacellava_25k)
+
+
+    # llava_1_5_lrv_mix1008k = Dataset(
+    #     dataset_name="llava_1_5_lrv_mix1008k",
+    #     dataset_type="torch",
+    #     data_path="/home/vlm/finetune_json/llava_v1_5_lrv_mix1008k.json",
+    #     image_path="/home/vlm/finetune_json/images",
+    # )
+    # add_dataset(llava_1_5_lrv_mix1008k)
+
+
+    # NOTE(Zhouenshen): Add the spatialvlm dataset for stage 1
+    template_qa_4_7M = Dataset(
+        dataset_name="template_qa_4_7M",
         dataset_type="spatialdataset",
-        data_path="/home/zhouenshen/dataset/vlm/vqasynth/train/metadata.json",
-        image_path="/home/zhouenshen/dataset/vlm/vqasynth/train/images",
-        depth_path="/home/zhouenshen/dataset/vlm/vqasynth/train/depths",
-        description="25.2K SFT data by SpatialVLM w/ depth (template) focusing on warehouse scenes."
+        data_path="/home_sfs/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_template_qa.json",
+        image_path="/home_sfs/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/positive",
+        depth_path="/home_sfs//zhouenshen/dataset/OpenImage/train_depth",
+        description="4.7 M SFT data w/ depth from OpenImage, 2.1 M data is related to point."
     )
-    add_dataset(vqasynth_spacellava_25k)
+    add_dataset(template_qa_4_7M)
+
+
+    choice_qa_920k = Dataset(
+        dataset_name="choice_qa_920k",
+        dataset_type="spatialdataset",
+        data_path="/home_sfs/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_choice_qa.json",
+        image_path="/home_sfs/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/positive",
+        depth_path="/home_sfs//zhouenshen/dataset/OpenImage/train_depth",
+        description="920k SFT data w/ depth from OpenImage, 460k data is related to point."
+    )
+    add_dataset(choice_qa_920k)
+
+
+    reason_qa_1_2M = Dataset(
+        dataset_name="reason_qa_1_2M",
+        dataset_type="spatialdataset",
+        data_path="/home_sfs/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_qa.json",
+        image_path="/home_sfs/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/positive",
+        depth_path="/home_sfs//zhouenshen/dataset/OpenImage/train_depth",
+        description="1.2 M SFT data w/ depth from OpenImage, 380k data is related to point."
+    )
+    add_dataset(reason_qa_1_2M)

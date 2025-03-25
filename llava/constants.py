@@ -25,7 +25,10 @@ LOGDIR = "."
 IGNORE_INDEX = -100
 DEFAULT_IMAGE_TOKEN = "<image>"
 
-# NOTE(Zhouenshen): Add depth token
+# NOTE(Zhouenshen): Add tokens for point and depth
+POINT_START_TOKEN = "<|point_start|>"
+POINT_END_TOKEN = "<|point_end|>"
+
 DEFAULT_DEPTH_TOKEN = "<depth>"
 
 # token: ['<|im_start|>', '<|im_end|>', '<vila/sentinel>', '<image>', '<vila/video>', '<depth>']
@@ -41,4 +44,4 @@ MEDIA_TOKENS = {
 
 
 # <image> <vila/video> <vila/sentinel>
-NUM_EXTRA_TOKENS = 3
+NUM_EXTRA_TOKENS = 5

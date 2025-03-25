@@ -27,7 +27,7 @@ import torch
 from PIL import Image
 from transformers import StoppingCriteria
 
-from llava.constants import DEFAULT_IMAGE_TOKEN
+from llava.constants import DEFAULT_DEPTH_TOKEN, DEFAULT_IMAGE_TOKEN
 
 
 def get_frame_from_vcap(vidcap, num_frames=10, max_fps=0.0, fps=None, frame_count=None, video_file_name=None):
@@ -624,29 +624,29 @@ def get_model_name_from_path(model_path):
 
 
 def process_rgbd_inference_conversation(s):
-    if "<depth>" not in s:
+    # 1. 如果文本中没有 DEFAULT_DEPTH_TOKEN，直接返回原文本
+    if DEFAULT_DEPTH_TOKEN not in s:
         return s
 
-    image_count = len(re.findall(r"<image>", s))
-    depth_count = len(re.findall(r"<depth>", s))
-
+    # 2. 判断 DEFAULT_IMAGE_TOKEN 和 DEFAULT_DEPTH_TOKEN 的数量是否一致（唯一对应）
+    image_count = len(re.findall(re.escape(DEFAULT_IMAGE_TOKEN), s))
+    depth_count = len(re.findall(re.escape(DEFAULT_DEPTH_TOKEN), s))
     if image_count != depth_count:
-        return "Error: The number of <image> and <depth> tags is not equal."
-
-    pattern = r"(?:<image>|<depth>)+"
-    match = re.match(pattern, s)
-    
-    if match:
-        tags_part = match.group()
-        text_part = s[len(tags_part):]
-    else:
         return s
 
-    tags_part = tags_part.replace("<image>", "<image>\n").replace("<depth>", "<depth>\n")
+    # 3. 清除文本中所有 DEFAULT_IMAGE_TOKEN 和 DEFAULT_DEPTH_TOKEN 标签，
+    #    如果标签后面跟有换行符也一起清理（使用 \n? 来匹配换行符，如果存在的话）
+    s_cleaned = re.sub(rf"{re.escape(DEFAULT_IMAGE_TOKEN)}\n?", "", s)
+    s_cleaned = re.sub(rf"{re.escape(DEFAULT_DEPTH_TOKEN)}\n?", "", s_cleaned)
 
-    result = tags_part + text_part.lstrip()
+    # 4. 去掉文本首尾可能存在的换行符
+    s_cleaned = s_cleaned.strip("\n")
 
-    return result
+    # 5. 根据统计的 DEFAULT_DEPTH_TOKEN 的数量，在文本前面添加 depth_count 个 "DEFAULT_IMAGE_TOKEN DEFAULT_DEPTH_TOKEN\n"
+    #    因为 image_count == depth_count，此处就按照 depth_count 来构建前缀
+    prefix = (f"{DEFAULT_IMAGE_TOKEN} {DEFAULT_DEPTH_TOKEN}\n") * depth_count
+
+    return prefix + s_cleaned
 
 
 class KeywordsStoppingCriteria(StoppingCriteria):

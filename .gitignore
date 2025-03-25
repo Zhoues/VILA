@@ -11,4 +11,13 @@
 *.log
 
 ckpt/
+wandb/
 *.sh
+*.jpg
+*.png
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.webp
+*.heic

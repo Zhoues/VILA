@@ -31,7 +31,7 @@ from transformers.modeling_utils import unwrap_model
 import llava.data.dataset as dataset
 import llava.data.datasets_mixture as datasets_mixture
 from llava import conversation as conversation_lib
-from llava.constants import DEFAULT_DEPTH_TOKEN, IGNORE_INDEX
+from llava.constants import DEFAULT_DEPTH_TOKEN, IGNORE_INDEX, POINT_END_TOKEN, POINT_START_TOKEN
 from llava.data import make_supervised_data_module
 from llava.mm_utils import process_image
 from llava.model import LlavaLlamaConfig, LlavaLlamaModel
@@ -719,17 +719,13 @@ def train():
         assert not model_args.mm_use_im_patch_token
 
         if model_args.enable_depth:
-            
-            if DEFAULT_DEPTH_TOKEN not in tokenizer.get_vocab():
-                tokenizer.add_tokens([DEFAULT_DEPTH_TOKEN], special_tokens=True)
-            # record depth token id
-            vision_tower_cfg = model.get_vision_tower().config
-            vision_tower_cfg.llm_depth_token_id = tokenizer.convert_tokens_to_ids(DEFAULT_DEPTH_TOKEN)
-
+            tokenizer.add_tokens([DEFAULT_DEPTH_TOKEN], special_tokens=True)
             # record depth token id in media token ids
             tokenizer.media_token_ids["depth"] = tokenizer.convert_tokens_to_ids(DEFAULT_DEPTH_TOKEN)
             tokenizer.media_tokens["depth"] = DEFAULT_DEPTH_TOKEN
-            mprint(f"Depth token id: {vision_tower_cfg.llm_depth_token_id}")
+            mprint(f"Depth token id: {tokenizer.media_token_ids['depth']}")
+
+        tokenizer.add_tokens([POINT_START_TOKEN, POINT_END_TOKEN], special_tokens=True)
 
         model.resize_token_embeddings(len(tokenizer))
         model.config.num_time_tokens = data_args.num_time_tokens = model_args.num_time_tokens
