@@ -12,7 +12,8 @@
 
 ckpt/
 wandb/
-*.sh
+data_prepare/*
+
 *.jpg
 *.png
 *.jpeg

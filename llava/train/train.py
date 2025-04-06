@@ -31,7 +31,7 @@ from transformers.modeling_utils import unwrap_model
 import llava.data.dataset as dataset
 import llava.data.datasets_mixture as datasets_mixture
 from llava import conversation as conversation_lib
-from llava.constants import DEFAULT_DEPTH_TOKEN, IGNORE_INDEX, POINT_END_TOKEN, POINT_START_TOKEN
+from llava.constants import DEFAULT_DEPTH_TOKEN, IGNORE_INDEX
 from llava.data import make_supervised_data_module
 from llava.mm_utils import process_image
 from llava.model import LlavaLlamaConfig, LlavaLlamaModel
@@ -718,16 +718,24 @@ def train():
             num_new_tokens = tokenizer.add_tokens([DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN], special_tokens=True)
         assert not model_args.mm_use_im_patch_token
 
+        num_new_tokens = 0
+        
         if model_args.enable_depth:
-            tokenizer.add_tokens([DEFAULT_DEPTH_TOKEN], special_tokens=True)
+            num_new_tokens = tokenizer.add_tokens([DEFAULT_DEPTH_TOKEN], special_tokens=True)
             # record depth token id in media token ids
             tokenizer.media_token_ids["depth"] = tokenizer.convert_tokens_to_ids(DEFAULT_DEPTH_TOKEN)
             tokenizer.media_tokens["depth"] = DEFAULT_DEPTH_TOKEN
-            mprint(f"Depth token id: {tokenizer.media_token_ids['depth']}")
-
-        tokenizer.add_tokens([POINT_START_TOKEN, POINT_END_TOKEN], special_tokens=True)
-
+        
         model.resize_token_embeddings(len(tokenizer))
+
+        # NOTE(Zhouenshen): fintune llm input embedding
+        if num_new_tokens > 0 and training_args.tune_depth_projector:
+            mprint(f"Add Depth token id: {tokenizer.media_token_ids['depth']}")
+            embedding_layer = model.get_input_embeddings()  # Embedding layer, shape: [vocab_size, embedding_dim]
+            embedding_weight = embedding_layer.weight  # parameter: shape [vocab_size, hidden_size]
+            embedding_weight.requires_grad = True
+            mprint("After adding depth token, fine-tune LLM input embedding")
+
         model.config.num_time_tokens = data_args.num_time_tokens = model_args.num_time_tokens
         model.config.time_token_format = data_args.time_token_format = model_args.time_token_format
         if model_args.num_time_tokens > 0:

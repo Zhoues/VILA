@@ -5,7 +5,8 @@ CONDA_ENV=${1:-""}
 if [ -n "$CONDA_ENV" ]; then
     # This is required to activate conda environment
     eval "$(conda shell.bash hook)"
-    conda create -n $CONDA_ENV python=3.11 -y
+
+    conda create -n $CONDA_ENV python=3.10.14 -y
     conda activate $CONDA_ENV
     # This is optional if you prefer to use built-in nvcc
     conda install -c nvidia cuda-toolkit -y
@@ -16,21 +17,14 @@ fi
 # This is required to enable PEP 660 support
 pip install --upgrade pip setuptools
 
+# Install FlashAttention2
+pip install https://github.com/Dao-AILab/flash-attention/releases/download/v2.5.8/flash_attn-2.5.8+cu122torch2.3cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
+
 # Install VILA
 pip install -e ".[train,eval]"
 
-# Install FlashAttention2
-# pip install https://github.com/Dao-AILab/flash-attention/releases/download/v2.5.8/flash_attn-2.5.8+cu122torch2.3cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
-pip install flash_attn==2.7.4.post1
-
 # Quantization requires the newest triton version, and introduce dependency issue
 pip install triton==3.1.0
-
-# Support Qwen 2.5 VL
-pip install transformers==4.50.2
-
-# fix bug of deepspeed
-pip install git+https://github.com/huggingface/trl.git
 
 # numpy introduce a lot dependencies issues, separate from pyproject.yaml
 # pip install numpy==1.26.4

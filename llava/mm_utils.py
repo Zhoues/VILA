@@ -420,6 +420,22 @@ def dynamic_process_images_and_prompt(images, prompt, data_args, image_folder=No
         prompt = prompt.replace(DEFAULT_IMAGE_TOKEN, "")
     return all_images, prompt
 
+def dynamic_process_depths_and_prompt(depths, prompt, data_args, depth_folder=None, max_tiles=None):
+    prompt = prompt.split(DEFAULT_DEPTH_TOKEN)
+    idx = 0
+    all_depths = []
+    for depth in depths:
+        processed_depths = process_depth(depth, data_args, depth_folder, enable_dynamic_res=True, max_tiles=max_tiles)
+        all_depths.append(processed_depths)
+        prompt.insert(idx + 1, f"{DEFAULT_DEPTH_TOKEN}\n" * processed_depths.shape[0])
+        idx += 2
+    prompt = "".join(prompt)
+    if all_depths:
+        all_depths = torch.cat(all_depths)
+    else:
+        all_depths = None
+        prompt = prompt.replace(DEFAULT_DEPTH_TOKEN, "")
+    return all_depths, prompt
 
 def dynamic_s2_process_images_and_prompt(images, prompt, data_args, image_folder=None):
     idx = 0
@@ -642,9 +658,10 @@ def process_rgbd_inference_conversation(s):
     # 4. 去掉文本首尾可能存在的换行符
     s_cleaned = s_cleaned.strip("\n")
 
-    # 5. 根据统计的 DEFAULT_DEPTH_TOKEN 的数量，在文本前面添加 depth_count 个 "DEFAULT_IMAGE_TOKEN DEFAULT_DEPTH_TOKEN\n"
+    # 5. 根据统计的 DEFAULT_DEPTH_TOKEN 的数量，在文本前面添加 depth_count 个 "DEFAULT_IMAGE_TOKEN\n\nDEFAULT_DEPTH_TOKEN\n"
     #    因为 image_count == depth_count，此处就按照 depth_count 来构建前缀
-    prefix = (f"{DEFAULT_IMAGE_TOKEN} {DEFAULT_DEPTH_TOKEN}\n") * depth_count
+    # prefix = (f"{DEFAULT_IMAGE_TOKEN}\n\n{DEFAULT_DEPTH_TOKEN}\n") * depth_count
+    prefix = (f"{DEFAULT_IMAGE_TOKEN}\n") * depth_count + '\n' + (f"{DEFAULT_DEPTH_TOKEN}\n") * depth_count + '\n'
 
     return prefix + s_cleaned
 

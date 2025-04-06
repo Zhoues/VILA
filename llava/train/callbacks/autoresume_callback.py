@@ -10,6 +10,7 @@ import sys
 import torch
 import transformers
 from transformers.utils import logging
+from llava.constants import DEFAULT_DEPTH_TOKEN
 
 logger = logging.get_logger("transformers")
 
@@ -60,5 +61,3 @@ class AutoResumeCallback(transformers.TrainerCallback):
                         AutoResume.request_resume()
                 control.should_training_stop = True
                 control.should_save = True
-
-

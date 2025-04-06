@@ -23,7 +23,7 @@ from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, BitsAn
 from llava.model import LlavaLlamaModel
 from llava.model.utils import is_mm_model
 
-from llava.constants import DEFAULT_DEPTH_TOKEN, POINT_END_TOKEN, POINT_START_TOKEN
+from llava.constants import DEFAULT_DEPTH_TOKEN
 
 
 def load_pretrained_model(
@@ -141,13 +141,10 @@ def load_pretrained_model(
         # NOTE(Zhouenshen): Add Special Token for llm tokenizer and vision tower
         enable_depth = getattr(model.config, "enable_depth", False)
         if enable_depth:
-            tokenizer.add_tokens([DEFAULT_DEPTH_TOKEN], special_tokens=True)
-            
+            num_new_tokens = tokenizer.add_tokens([DEFAULT_DEPTH_TOKEN], special_tokens=True)            
             # record depth token id in media token ids
             tokenizer.media_token_ids["depth"] = tokenizer.convert_tokens_to_ids(DEFAULT_DEPTH_TOKEN)
             tokenizer.media_tokens["depth"] = DEFAULT_DEPTH_TOKEN
-
-        tokenizer.add_tokens([POINT_START_TOKEN, POINT_END_TOKEN], special_tokens=True)
 
         model.resize_token_embeddings(len(tokenizer))
         vision_tower = model.get_vision_tower()

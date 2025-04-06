@@ -31,8 +31,8 @@ from hydra.utils import instantiate
 from transformers import AutoConfig, GenerationConfig, LogitsProcessor
 from transformers.modeling_utils import ContextManagers, no_init_weights
 
-from llava.constants import DEFAULT_IMAGE_TOKEN, IGNORE_INDEX, NUM_EXTRA_TOKENS
-from llava.mm_utils import dynamic_s2_process_depths_and_prompt, dynamic_s2_process_images_and_prompt, process_depth, process_image, process_images, process_rgbd_inference_conversation
+from llava.constants import DEFAULT_DEPTH_TOKEN, DEFAULT_IMAGE_TOKEN, IGNORE_INDEX, NUM_EXTRA_TOKENS
+from llava.mm_utils import dynamic_process_depths_and_prompt, dynamic_process_images_and_prompt, dynamic_s2_process_depths_and_prompt, dynamic_s2_process_images_and_prompt, process_depth, process_image, process_images, process_rgbd_inference_conversation
 from llava.model.configuration_llava import LlavaConfig, ResponseFormat
 from llava.model.language_model.builder import build_llm_and_tokenizer
 from llava.model.multimodal_encoder.builder import build_vision_tower
@@ -194,7 +194,7 @@ class LlavaMetaModel(ABC):
         return vlm
 
     ## FIXME we will use this function to save the model in the future
-    def save_pretrained(self, output_dir, state_dict=None):
+    def save_pretrained(self, output_dir, state_dict=None, safe_serialization=False):
         if state_dict is None:
             # other wise fetch from deepspeed
             # state_dict = accelerator.get_state_dict(is_deepspeed_enabled)
@@ -599,7 +599,10 @@ class LlavaMetaForCausalLM(ABC):
 
         def encode(name, tensors, config, is_depth=False):
             """Helper function to encode media tensors."""
-            encoder_name = name if is_depth and use_depth_tower else "image" if is_depth else name
+            if is_depth and not use_depth_tower:
+                encoder_name = "image"
+            else:
+                encoder_name = name
             return self.encoders[encoder_name](tensors, config, is_depth=is_depth, use_depth_tower=use_depth_tower)
         
         for name, tensors in media.items():
@@ -940,6 +943,9 @@ class LlavaMetaForCausalLM(ABC):
         attention_mask: Optional[torch.LongTensor] = None,
         **generation_kwargs,
     ):
+        # NOTE(Zhouenshen): If media_config is None, set it to defaultdict(dict). Remember not to delete this part.
+        media_config = defaultdict(dict) if media_config is None else media_config
+
         inputs_embeds, _, attention_mask = self._embed(input_ids, media, media_config, None, attention_mask)
         return self.llm.generate(inputs_embeds=inputs_embeds, attention_mask=attention_mask, **generation_kwargs)
 
@@ -960,12 +966,16 @@ class LlavaMetaForCausalLM(ABC):
             xgr_logits_processor = None
 
         # Extract media from the conversation
-
         # TODO (extract and preprocess should be done together, as the preprocess of image and video can be different, i.e. when dynamic res is used)
         media = extract_media(conversation, self.config)
-
         # Process media
         media_config = defaultdict(dict)
+        
+        # NOTE(Zhouenshen): For dynamic or dynamic_s2, edit the conversation to add the special tokens
+        if self.config.image_aspect_ratio in ["dynamic", "dynamic_s2"]:
+            for conv in conversation:
+                conv["value"] = process_rgbd_inference_conversation(conv["value"])
+        
         for name in media:
             if name in ["image", "depth"]:
                 # if len(media["image"]) == 1 and self.config.image_aspect_ratio in ["dynamic", "dynamic_s2"]:
@@ -988,8 +998,6 @@ class LlavaMetaForCausalLM(ABC):
                 # media[name] = [image for image in images]
 
                 # NOTE(Zhouenshen): process depth and image separately
-                assert self.config.image_aspect_ratio != "dynamic", "Dynamic image is not supported for depth input"
-
                 if self.config.image_aspect_ratio == "dynamic_s2":
                     if name == "depth" and hasattr(self.config, "use_depth_tower") and self.config.use_depth_tower:
                         self.config.image_processor = self.depth_tower.image_processor
@@ -1004,6 +1012,17 @@ class LlavaMetaForCausalLM(ABC):
                         images, block_sizes = dynamic_s2_process_depths_and_prompt(depths=media["depth"], prompt=None, data_args=self.config, depth_folder=None)
                     images = images.half()
                     media_config[name]["block_sizes"] = block_sizes
+                
+                elif self.config.image_aspect_ratio == "dynamic":
+                    if name == "depth" and hasattr(self.config, "use_depth_tower") and self.config.use_depth_tower:
+                        self.config.image_processor = self.depth_tower.image_processor
+                    else:
+                        self.config.image_processor = self.vision_tower.image_processor
+                    if name == "image":
+                        images, conversation[0]["value"] = dynamic_process_images_and_prompt(images=media["image"], prompt=conversation[0]["value"], data_args=self.config, image_folder=None)
+                    else:
+                        images, conversation[0]["value"] = dynamic_process_depths_and_prompt(depths=media["depth"], prompt=conversation[0]["value"], data_args=self.config, depth_folder=None)
+                    images = images.half()
                 else:
                     if name == "image":
                         images = torch.stack([process_image(image_file=img, data_args= self.config, image_folder=None) for img in media["image"]]).half()
@@ -1017,9 +1036,6 @@ class LlavaMetaForCausalLM(ABC):
                 ]
             else:
                 raise ValueError(f"Unsupported media type: {name}")
-
-        for conv in conversation:
-            conv["value"] = process_rgbd_inference_conversation(conv["value"])
 
         # Tokenize the conversation
         input_ids = tokenize_conversation(conversation, self.tokenizer, add_generation_prompt=True).cuda().unsqueeze(0)
