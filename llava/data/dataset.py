@@ -25,7 +25,7 @@ import time
 import warnings
 from dataclasses import dataclass
 from typing import Dict, Sequence
-
+from termcolor import colored
 import numpy as np
 import PIL
 import torch
@@ -119,49 +119,20 @@ def preprocess_multimodal(sources: Sequence[str], data_args: DataArguments) -> D
 
     return sources
 
-
-def preprocess_rgbd(sources: Sequence, depth_num: int, data_args) -> Dict:
+def preprocess_rgbd(sources: Sequence[str], image_num: int, enable_depth: bool, data_args: DataArguments) -> Dict:
     """
-    Preprocesses conversations that may contain <image> and <depth> tokens in various positions.
-    
-    Args:
-        sources: A sequence of conversation sources to preprocess.
-        depth_num: The number of depth tokens to include in the preprocessed output.
-                  This controls how many <image> and <depth> token pairs are added to the beginning
-                  of the first message.
-        data_args: Data arguments containing configuration for multimodal processing.
-    
-    Returns:
-        The preprocessed sources with standardized token placement.
-    
-    New behavior:
-      1. Matches occurrences of "<image>" and "<depth>" in the text. If the token is immediately
-         followed by a newline (i.e. "\n"), then it is considered as "<image>\n" or "<depth>\n".
-      2. Records the count of <image> (or <image>\n) and <depth> (or <depth>\n) tokens respectively,
-         and asserts that their counts are equal.
-      3. Removes from the entire text all occurrences of these tokens.
-      4. Constructs the final text in the standardized format:
-            n * "<image>\n" + '\n' + n * "<depth>\n" + '\n' + remaining_text,。
-    
-    Examples:
-      1) "\n<image>\n<depth>\nWhat is the distance between A and B?"
-         becomes:
-         "<image>\n<depth>\nWhat is the distance between A and B?"
-    
-      2) "<image>\nWhat is the distance between A and B?<depth>\n\n"
-         becomes:
-         "<image>\n<depth>\nWhat is the distance between A and B?"
-    
-      3) "<image>\n<depth>\n<image>\n<depth>\n How does the distance change..."
-         becomes:
-         "<image>\n<image>\n<depth>\n<depth>\nHow does the distance change..."
-    
-      4) "\n<image>\n<depth>\n How does the distance change ... <image>\n<depth>\n"
-         becomes:
-         "<image>\n<image>\n<depth>\n<depth>\nHow does the distance change ..."
+    Preprocesses conversations that may contain RGB-D tokens in the form "<image> <depth>\n".
+    The goal is to move all occurrences of "<image> <depth>\n" (with exactly one space,
+    and ending in a newline) to the beginning of the message value, in the order they
+    originally appeared, followed by the remaining text.
+
+    If `data_args` does not specify an RGB-D scenario, this function simply returns `sources` unchanged.
     """
 
+    # whether to train the vision tower with multimodal data
     is_multimodal = data_args.is_multimodal
+
+    # no need to preprocess multimodal data
     if not is_multimodal:
         return sources
 
@@ -170,56 +141,19 @@ def preprocess_rgbd(sources: Sequence, depth_num: int, data_args) -> Dict:
     for source in sources:
         for sid, sentence in enumerate(source):
             text = sentence.get("value", "")
-            # 1. Clear all tokens
+            # 1. 清除所有 token
             text = pattern.sub("", text)
-            # 2. Remove leading and trailing newline characters (and other whitespace characters)
+            # 2. 去除首尾的换行符（以及其他空白字符）
             text = text.strip()
-
-            if sid == 0:
-                prefix = (f"{DEFAULT_IMAGE_TOKEN}\n" * depth_num) + '\n' + (f"{DEFAULT_DEPTH_TOKEN}\n" * depth_num) + '\n'
+            # 3. 根据 image_num 在文本前添加指定数量的前缀
+            if sid == 0 and enable_depth:
+                prefix = (f"{DEFAULT_IMAGE_TOKEN} {DEFAULT_DEPTH_TOKEN}\n") * image_num
                 sentence["value"] = prefix + text
+            elif sid == 0 and not enable_depth:
+                sentence["value"] = f"{DEFAULT_IMAGE_TOKEN}\n" * image_num + text
             else:
                 sentence["value"] = text
-
     return sources
-
-
-# def preprocess_rgbd(sources: Sequence[str], depth_num: int, data_args: DataArguments) -> Dict:
-#     """
-#     Preprocesses conversations that may contain RGB-D tokens in the form "<image> <depth>\n".
-#     The goal is to move all occurrences of "<image> <depth>\n" (with exactly one space,
-#     and ending in a newline) to the beginning of the message value, in the order they
-#     originally appeared, followed by the remaining text.
-
-#     If `data_args` does not specify an RGB-D scenario, this function simply returns `sources` unchanged.
-#     """
-
-#     # whether to train the vision tower with multimodal data
-#     is_multimodal = data_args.is_multimodal
-
-#     # no need to preprocess multimodal data
-#     if not is_multimodal:
-#         return sources
-
-#     pattern = re.compile(rf"(?:{re.escape(DEFAULT_IMAGE_TOKEN)}|{re.escape(DEFAULT_DEPTH_TOKEN)})\n?")
-    
-#     for source in sources:
-#         for sid, sentence in enumerate(source):
-#             text = sentence.get("value", "")
-#             # 1. Clear all tokens
-#             text = pattern.sub("", text)
-#             # 2. Remove leading and trailing newline characters (and other whitespace characters)
-#             text = text.strip()
-#             # 3. Add a specified number of prefixes to the text based on depth_num
-#             if sid == 0:
-#                 # prefix = (f"{DEFAULT_IMAGE_TOKEN}\n{DEFAULT_DEPTH_TOKEN}\n") * depth_num
-#                 prefix = (f"{DEFAULT_IMAGE_TOKEN}\n{DEFAULT_DEPTH_TOKEN}\n")
-#                 sentence["value"] = prefix + text
-#             else:
-#                 sentence["value"] = text
-#     return sources
-
-
 
 def preprocess_plain(
     sources: Sequence[str],
@@ -1467,11 +1401,15 @@ class LazySupervisedSpatialDataset(Dataset):
         if "image" in sources[0]:
             
             image_file = self.list_data_dict[i]["image"]
-            depth_file = self.list_data_dict[i]["depth"]
+            if self.enable_depth:
+                depth_file = self.list_data_dict[i]["depth"]
 
             # process conversations
             if enable_dynamic_res_s2 or enable_dynamic_res:
-                sources = preprocess_rgbd(copy.deepcopy([e["conversations"] for e in sources]), 1 if not isinstance(depth_file, list) else len(depth_file), self.data_args)
+                if isinstance(image_file, list):
+                    sources = preprocess_rgbd(copy.deepcopy([e["conversations"] for e in sources]), len(image_file), self.enable_depth, self.data_args)
+                else:
+                    sources = preprocess_rgbd(copy.deepcopy([e["conversations"] for e in sources]), 1, self.enable_depth, self.data_args)
 
             # image is a list of images, depth is a list of depths
             if isinstance(image_file, list):
@@ -1501,7 +1439,9 @@ class LazySupervisedSpatialDataset(Dataset):
                     if self.enable_depth:
                         processed_depths = process_depth(depth_file, self.data_args, self.depth_folder)
         else:
-            raise NotImplementedError("SpaitalDataset need at least any image")
+            print(colored("No image in the data. If this dataset is not spatial dataset (e.g. LLaVA 1.5), please check the data format.", "red"))
+            sources = copy.deepcopy([e["conversations"] for e in sources])
+            # raise NotImplementedError("SpaitalDataset need at least any image")
         # except:
         #     print("got bad image or depth...get another one...")
         #     return self.__getitem__(random.randint(0, len(self.list_data_dict)))
@@ -1531,7 +1471,13 @@ class LazySupervisedSpatialDataset(Dataset):
                 if self.enable_depth:
                     data_dict["depth_block_sizes"] = depth_block_sizes
         else:
-            raise NotImplementedError("SpatialDataset need image")
+            # llava 1.5 way
+            # image does not exist in the data, but the model is multimodal
+            # crop_size = self.data_args.image_processor.crop_size
+            # data_dict['image'] = torch.zeros(3, crop_size['height'], crop_size['width'])
+            # vila way
+            data_dict["image"] = None
+            # raise NotImplementedError("SpatialDataset need image")
 
         return data_dict
 

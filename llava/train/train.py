@@ -731,10 +731,10 @@ def train():
         # NOTE(Zhouenshen): fintune llm input embedding
         if num_new_tokens > 0 and training_args.tune_depth_projector:
             mprint(f"Add Depth token id: {tokenizer.media_token_ids['depth']}")
-            embedding_layer = model.get_input_embeddings()  # Embedding layer, shape: [vocab_size, embedding_dim]
-            embedding_weight = embedding_layer.weight  # parameter: shape [vocab_size, hidden_size]
-            embedding_weight.requires_grad = True
-            mprint("After adding depth token, fine-tune LLM input embedding")
+            # embedding_layer = model.get_input_embeddings()  # Embedding layer, shape: [vocab_size, embedding_dim]
+            # embedding_weight = embedding_layer.weight  # parameter: shape [vocab_size, hidden_size]
+            # embedding_weight.requires_grad = True
+            # mprint("After adding depth token, fine-tune LLM input embedding")
 
         model.config.num_time_tokens = data_args.num_time_tokens = model_args.num_time_tokens
         model.config.time_token_format = data_args.time_token_format = model_args.time_token_format

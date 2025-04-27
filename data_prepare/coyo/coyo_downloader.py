@@ -27,8 +27,8 @@ import aiohttp
 import pandas as pd
 from tqdm import tqdm
 
-input_dir = "/dataset/coyo-test/coyo-700m/data"  # path to the MMC4 annotations
-output_dir = "/dataset/coyo-test/coyo-700m/pkl"  # path to the download file
+input_dir = "/mnt/hpfs/baaiei/zhouenshen/dataset/vlm/coyo-700m/data"  # path to the MMC4 annotations
+output_dir = "/mnt/hpfs/baaiei/zhouenshen/dataset/vlm/coyo-700m/pkl"  # path to the download file
 
 os.makedirs(output_dir, exist_ok=True)
 
@@ -75,7 +75,7 @@ async def download_file(session, data, output_dict):
                     success = False
                     # print(f"Unable to download image at {url}. HTTP response code: {resp.status}")
         except Exception as e:
-            print(e)
+            # print(e)
             success = False
 
         if success:
@@ -100,9 +100,9 @@ async def download_file(session, data, output_dict):
 
                 data["image"] = img_b64_str
                 output_dict[data["id"]] = data
-
+                print(f"{len(output_dict)}")
             except Exception as e:
-                print(e)
+                # print(e)
                 success = False
 
         if os.path.exists(f_name):

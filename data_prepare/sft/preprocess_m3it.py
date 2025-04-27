@@ -23,8 +23,12 @@ from datasets import concatenate_datasets, load_dataset
 from tqdm import tqdm
 
 # download M3IT to the dataset_path directory
-dataset_path = "/dataset/llava-data/instruction-tuning/M3IT"
-save_path = "/dataset/llava-data/instruction-tuning/new-vflan"
+# dataset_path = "/dataset/llava-data/instruction-tuning/M3IT"
+# save_path = "/dataset/llava-data/instruction-tuning/new-vflan"
+
+dataset_path = "/home/zhouenshen/dataset/vlm/M3IT"
+save_path = "/home/zhouenshen/dataset/vlm/new-vflan"
+
 os.makedirs(save_path, exist_ok=True)
 
 dataset_types = [

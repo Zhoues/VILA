@@ -658,10 +658,9 @@ def process_rgbd_inference_conversation(s):
     # 4. 去掉文本首尾可能存在的换行符
     s_cleaned = s_cleaned.strip("\n")
 
-    # 5. 根据统计的 DEFAULT_DEPTH_TOKEN 的数量，在文本前面添加 depth_count 个 "DEFAULT_IMAGE_TOKEN\n\nDEFAULT_DEPTH_TOKEN\n"
+    # 5. 根据统计的 DEFAULT_DEPTH_TOKEN 的数量，在文本前面添加 depth_count 个 "DEFAULT_IMAGE_TOKEN DEFAULT_DEPTH_TOKEN\n"
     #    因为 image_count == depth_count，此处就按照 depth_count 来构建前缀
-    # prefix = (f"{DEFAULT_IMAGE_TOKEN}\n\n{DEFAULT_DEPTH_TOKEN}\n") * depth_count
-    prefix = (f"{DEFAULT_IMAGE_TOKEN}\n") * depth_count + '\n' + (f"{DEFAULT_DEPTH_TOKEN}\n") * depth_count + '\n'
+    prefix = (f"{DEFAULT_IMAGE_TOKEN} {DEFAULT_DEPTH_TOKEN}\n") * depth_count
 
     return prefix + s_cleaned
 
