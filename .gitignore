@@ -14,7 +14,6 @@ ckpt/
 wandb/
 data_prepare/*
 
-*.jpg
 *.png
 *.jpeg
 *.gif
