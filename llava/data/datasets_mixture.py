@@ -240,6 +240,23 @@ def register_datasets_mixtures():
     )
     add_dataset(ca1m_vacant_qa_121k_RGB)
 
+    ca1m_multi_view_qa_77k = Dataset(
+        dataset_name="ca1m_multi_view_qa_77k",
+        dataset_type="spatialdataset",   
+        data_path="/home_sfs/zhouenshen/dataset/3D/cubifyanything/ca1m_multi_view_qa.json",
+        image_path="/home_sfs/zhouenshen/dataset/3D/cubifyanything/images_multi_view",
+        depth_path="/home_sfs/zhouenshen/dataset/3D/cubifyanything/depths_multi_view",    
+        description="77k SFT data w/ depth from CA-1M."    
+    )
+    add_dataset(ca1m_multi_view_qa_77k)
+
+    ca1m_multi_view_qa_77k_RGB = Dataset(
+        dataset_name="ca1m_multi_view_qa_77k_RGB",
+        dataset_type="spatialdataset",   
+        data_path="/home_sfs/zhouenshen/dataset/3D/cubifyanything/ca1m_multi_view_qa.json",
+        image_path="/home_sfs/zhouenshen/dataset/3D/cubifyanything/images_multi_view"
+    )
+    add_dataset(ca1m_multi_view_qa_77k_RGB)
 
     ### Simulator (2D Dataset)
     simulator_216k = Dataset(

@@ -49,7 +49,7 @@ depth_anything = depth_anything.to(DEVICE).eval()
 ########################
 
 ######################## VLM
-vlm_model_path = '/home/zhouenshen/code/VILA/runs/train/NVILA-Lite-2B-depth-sft-2d+3d+sim/model/checkpoint-7000'
+vlm_model_path = '/home/zhouenshen/code/VILA/runs/train/NVILA-Lite-2B-depth-sft-2d+3d+sim/model'
 # vlm_model_path = '/home/zhouenshen/code/VILA/runs/train/NVILA-8B-depth-sft-mlp-2d+3d/model'
 # vlm_model_path = '/home/zhouenshen/code/VILA/ckpt/pretrain_weights/NVILA-8B'
 # vlm_model_path = '/home/zhouenshen/code/VILA/ckpt/pretrain_weights/NVILA-Lite-2B'
