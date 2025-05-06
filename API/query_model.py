@@ -4,7 +4,6 @@ import os
 import time
 import requests
 
-
 # Function to encode the image
 def encode_image(image_path):
   with open(image_path, "rb") as image_file:

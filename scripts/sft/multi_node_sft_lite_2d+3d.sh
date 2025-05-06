@@ -2,13 +2,13 @@
 source /home/tanhuajie/miniconda3/bin/activate vila_zhoues
 
 export PYTHONPATH=$(pwd)
-export BASE_RUN_NAME="depth-sft-2d+3d+sim"
+export BASE_RUN_NAME="depth-sft-2d+3d"
 
 export STAGE_PATH=/home/zhouenshen/code/VILA/runs/train/NVILA-Lite-2B-depth-align-2d+3d+sim/model
 
 export VISION_TOWER=/home/zhouenshen/code/VILA/ckpt/pretrain_weights/paligemma-siglip-so400m-patch14-448
 export DEPTH_TOWER=/home/zhouenshen/code/VILA/ckpt/pretrain_weights/paligemma-siglip-so400m-patch14-448
-export DATA_MIXTURE="choice_qa_4M+choice_qa_4M_RGB+reason_template_qa_5_9M+reason_template_qa_5_9M_RGB+sat_176k+sat_176k_RGB+refcoco_1_2M+refcoco_1_2M_RGB+refcocop_1_2M+refcocop_1_2M_RGB+refcocog_80k+refcocog_80k_RGB+blink_spatial_relation+blink_spatial_relation_RGB+blink_relative_depth+blink_relative_depth_RGB+blink_Object_Localization+blink_Object_Localization_RGB+blink_all+blink_all_RGB+cv_bench_all+cv_bench_all_RGB+embspatial_127k+embspatial_127k_RGB+embspatial_12k_random+embspatial_12k_random_RGB+llava_1_5_lrv_mix_965k+simulator_216k+simulator_216k_RGB+simulator_216k+simulator_216k_RGB"
+export DATA_MIXTURE="choice_qa_4M+choice_qa_4M_RGB+reason_template_qa_5_9M+reason_template_qa_5_9M_RGB+sat_176k+sat_176k_RGB+ca1m_reasoning_template_qa_3_2M_split+ca1m_reasoning_template_qa_3_2M_split_RGB+ca1m_choice_qa_2_1M_split+ca1m_choice_qa_2_1M_split_RGB+refcoco_1_2M+refcoco_1_2M_RGB+refcocop_1_2M+refcocop_1_2M_RGB+refcocog_80k+refcocog_80k_RGB+embspatial_127k+embspatial_127k_RGB+ca1m_vacant_qa_121k+ca1m_vacant_qa_121k_RGB+ca1m_vacant_qa_121k+ca1m_vacant_qa_121k_RGB"
 export OUTPUT_DIR=/home/zhouenshen/code/VILA/runs/train/NVILA-Lite-2B-${BASE_RUN_NAME}
 
 
@@ -16,7 +16,7 @@ export HOSTFILE=/home/zhouenshen/code/VILA/hostfile/hostfile_ours
 
 # training config
 export GPUS_PER_NODE=8
-export PER_DEVICE_TRAIN_BATCH_SIZE=6
+export PER_DEVICE_TRAIN_BATCH_SIZE=5
 export GRADIENT_ACCUMULATION_STEPS=1
 export MASTER_PORT=25160
 

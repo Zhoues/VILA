@@ -10,13 +10,16 @@ data_path_list = [
     "/home_sfs/zhouenshen/dataset/3D/cubifyanything/ca1m_choice_qa_split.json",
     "/home_sfs/zhouenshen/dataset/3D/cubifyanything/ca1m_visual_choice_qa.json",
     "/home_sfs/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa.json",
+    "/home_sfs/zhouenshen/dataset/3D/cubifyanything/ca1m_multi_view_qa.json",
 
     "/home_sfs/zhouenshen/dataset/Simulator/metadata_split_10.json",
 
-    "/home_sfs/zhouenshen/dataset/Detection/refcoco/metadata.json",
-    "/home_sfs/zhouenshen/dataset/Detection/refcocop/metadata.json",
-    "/home_sfs/zhouenshen/dataset/Detection/refcocog/metadata.json",
-    "/home_sfs/zhouenshen/dataset/vlm/SAT/metadata.json",
+    # "/home_sfs/zhouenshen/dataset/Simulator/metadata_split_10.json",
+
+    # "/home_sfs/zhouenshen/dataset/Detection/refcoco/metadata.json",
+    # "/home_sfs/zhouenshen/dataset/Detection/refcocop/metadata.json",
+    # "/home_sfs/zhouenshen/dataset/Detection/refcocog/metadata.json",
+    # "/home_sfs/zhouenshen/dataset/vlm/SAT/metadata.json",
     # "/home_sfs/zhouenshen/dataset/vlm/Pixmo/pixmo_0_10_points_w_counting.json",
 ]
 

@@ -2,9 +2,9 @@
 source /home/tanhuajie/miniconda3/bin/activate vila_zhoues
 
 export PYTHONPATH=$(pwd)
-export BASE_RUN_NAME="depth-sft-2d+3d+sim-real"
+export BASE_RUN_NAME="depth-sft-2d+3d+sim-v2"
 
-export STAGE_PATH=/home/zhouenshen/code/VILA/runs/train/NVILA-Lite-2B-depth-align-2d+3d+sim/model
+export STAGE_PATH=/home/zhouenshen/code/VILA/runs/train/NVILA-Lite-2B-depth-align-2d+3d+sim-v2/model
 
 export VISION_TOWER=/home/zhouenshen/code/VILA/ckpt/pretrain_weights/paligemma-siglip-so400m-patch14-448
 export DEPTH_TOWER=/home/zhouenshen/code/VILA/ckpt/pretrain_weights/paligemma-siglip-so400m-patch14-448

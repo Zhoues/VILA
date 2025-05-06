@@ -2,14 +2,16 @@
 source /home/tanhuajie/miniconda3/bin/activate vila_zhoues
 
 export PYTHONPATH=$(pwd)
-export BASE_RUN_NAME="depth-align-2d+3d+sim"
+export BASE_RUN_NAME="depth-align-2d+3d+sim-v2"
 
 export STAGE_PATH=/home/zhouenshen/code/VILA/ckpt/pretrain_weights/NVILA-Lite-2B-depth
 
 export VISION_TOWER=/home/zhouenshen/code/VILA/ckpt/pretrain_weights/paligemma-siglip-so400m-patch14-448
 export DEPTH_TOWER=/home/zhouenshen/code/VILA/ckpt/pretrain_weights/paligemma-siglip-so400m-patch14-448
 # export DATA_MIXTURE="choice_qa_4M+reason_template_qa_5_9M+sat_176k+ca1m_reasoning_template_qa_3_2M_split+ca1m_choice_qa_2_1M_split+ca1m_visual_choice_qa_341k+refcoco_1_2M+refcocop_1_2M+refcocog_80k+sat_176k+blink_spatial_relation+blink_spatial_relation+blink_spatial_relation+blink_relative_depth+blink_Object_Localization+blink_Multi_view_Reasoning+cv_bench_relation+cv_bench_depth+cv_bench_depth+cv_bench_depth+cv_bench_distance+cv_bench_distance+cv_bench_distance"
-export DATA_MIXTURE="choice_qa_4M+reason_template_qa_5_9M+sat_176k+ca1m_reasoning_template_qa_3_2M_split+ca1m_choice_qa_2_1M_split+ca1m_visual_choice_qa_341k+refcoco_1_2M+refcocop_1_2M+refcocog_80k+sat_176k+blink_spatial_relation+blink_relative_depth+blink_Object_Localization+blink_Multi_view_Reasoning+blink_all+cv_bench_relation+cv_bench_depth+cv_bench_distance+cv_bench_all+embspatial_127k+ca1m_vacant_qa_121k+ca1m_vacant_qa_121k+simulator_216k+simulator_216k"
+# export DATA_MIXTURE="choice_qa_4M+reason_template_qa_5_9M+sat_176k+ca1m_reasoning_template_qa_3_2M_split+ca1m_choice_qa_2_1M_split+ca1m_visual_choice_qa_341k+refcoco_1_2M+refcocop_1_2M+refcocog_80k+sat_176k+blink_spatial_relation+blink_relative_depth+blink_Object_Localization+blink_Multi_view_Reasoning+blink_all+cv_bench_relation+cv_bench_depth+cv_bench_distance+cv_bench_all+embspatial_127k+ca1m_vacant_qa_121k+ca1m_vacant_qa_121k+simulator_216k+simulator_216k"
+export DATA_MIXTURE="choice_qa_4M+reason_template_qa_5_9M+sat_176k+ca1m_reasoning_template_qa_3_2M_split+ca1m_choice_qa_2_1M_split+ca1m_visual_choice_qa_341k+refcoco_1_2M+refcocop_1_2M+refcocog_80k+embspatial_127k+ca1m_vacant_qa_121k+ca1m_vacant_qa_121k+ca1m_multi_view_qa_77k+simulator_216k+simulator_216k"
+
 export OUTPUT_DIR=/home/zhouenshen/code/VILA/runs/train/NVILA-Lite-2B-${BASE_RUN_NAME}
 
 
@@ -19,7 +21,7 @@ export HOSTFILE=/home/zhouenshen/code/VILA/hostfile/hostfile_ours
 export GPUS_PER_NODE=8
 export PER_DEVICE_TRAIN_BATCH_SIZE=7
 export GRADIENT_ACCUMULATION_STEPS=1
-export MASTER_PORT=25470
+export MASTER_PORT=25190
 
 
 # network config
@@ -33,7 +35,7 @@ export OMP_NUM_THREADS=4
 export NCCL_IB_HCA=mlx5_0,mlx5_1
 export TORCH_SHOW_CPP_STACKTRACES=1
 export NCCL_BLOCKING_WAIT=1
-export NCCL_PORT=25471
+export NCCL_PORT=25191
 # source scripts/setups/train.sh
 
 
