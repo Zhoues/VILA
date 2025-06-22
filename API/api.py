@@ -1,6 +1,3 @@
-
-
-
 import argparse
 import json
 import os
@@ -24,7 +21,7 @@ from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-UPLOAD_FOLDER = '/home/zhouenshen/tmp'
+UPLOAD_FOLDER = '/share/project/zhouenshen/hpfs/tmp'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 ######################## Flask
@@ -42,15 +39,15 @@ model_configs = {
 }
 depth_anything = DepthAnythingV2(**model_configs[depth_encoder])
 depth_anything.load_state_dict(torch.load(
-    f'/home/zhouenshen/ckpt/depthanything/depth_anything_v2_{depth_encoder}.pth',
+    f'/share/project/zhouenshen/hpfs/ckpt/depthanything/depth_anything_v2_{depth_encoder}.pth',
     map_location='cpu'
 ))
 depth_anything = depth_anything.to(DEVICE).eval()
 ########################
 
 ######################## VLM
-# vlm_model_path = '/home/zhouenshen/code/VILA/runs/train/NVILA-Lite-2B-depth-sft-2d+sim/model'
-vlm_model_path = '/home/zhouenshen/code/VILA/runs/train/NVILA-Lite-2B-depth-sft-2d+3d+sim-v2/model'
+vlm_model_path = '/home/zhouenshen/code/VILA/runs/train/NVILA-Lite-2B-depth-sft-2d+3d+sim/model'
+# vlm_model_path = '/home/zhouenshen/code/VILA/runs/train/NVILA-8B-depth-sft-mlp-2d+3d/model'
 # vlm_model_path = '/home/zhouenshen/code/VILA/ckpt/pretrain_weights/NVILA-8B'
 # vlm_model_path = '/home/zhouenshen/code/VILA/ckpt/pretrain_weights/NVILA-Lite-2B'
 vlm_conv_mode = 'auto'

@@ -109,8 +109,8 @@ def denormalize_and_mark(image_path, normalized_points, output_path="output.jpg"
     print(f"已保存标注图像到: {output_path}")
 
 # 主代码
-test_image_path = "/home_sfs/zhouenshen/dataset/3D/cubifyanything/val/ca1m-val-47430475/47430475/310622950863541.wide/image.png"
-test_prompt = "Please point out the white object which is behind the alarm clock."
+test_image_path = "image.jpg"
+test_prompt = "Please point to the leftmost mug"
 suffix = "Your answer should be formatted as a list of tuples, i.e. [(x1, y1)], where each tuple contains the x and y coordinates of a point satisfying the conditions above. The coordinates should be between 0 and 1, indicating the normalized pixel locations of the points in the image."
 new_test_image_path = resize_and_save_image(test_image_path)
 test_image_paths = [str(new_test_image_path)]

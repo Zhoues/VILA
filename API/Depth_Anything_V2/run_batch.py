@@ -4,21 +4,22 @@ import numpy as np
 import multiprocessing
 
 # 1. 读取所有图片路径
-IMG_DIR = "/home_sfs/zhouenshen/dataset/vlm/EmbSpatial/images_random"  # 你的图片文件夹
+IMG_DIR = "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/images_random"  # 你的图片文件夹
 all_images = glob.glob(os.path.join(IMG_DIR, "**/*"), recursive=True)
 all_images = [img for img in all_images if img.lower().endswith((".jpg", ".png", ".jpeg"))]
 
 print(len(all_images))
 
 # 2. 确保任务均匀分配给 32 个进程
-NUM_PROCESSES = 24
+# NUM_PROCESSES = 24
+NUM_PROCESSES = 3
 image_chunks = np.array_split(all_images, NUM_PROCESSES)
 
 # 3. 生成任务列表，每个进程一个图片子集
 tasks = [(i, chunk.tolist()) for i, chunk in enumerate(image_chunks)]
 
 # 处理图片
-OUTDIR = f"/home_sfs/zhouenshen/dataset/vlm/EmbSpatial/depths_random"
+OUTDIR = f"/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/depths_random"
 os.makedirs(OUTDIR, exist_ok=True)
 
 import argparse
@@ -44,7 +45,7 @@ def process_images(gpu_id, process_id, filenames):
 
     # 加载模型
     model = DepthAnythingV2(**model_configs[encoder_type])
-    model.load_state_dict(torch.load(f'/home/zhouenshen/ckpt/depthanything/depth_anything_v2_{encoder_type}.pth', map_location='cpu'))
+    model.load_state_dict(torch.load(f'/share/project/zhouenshen/hpfs/ckpt/depthanything/depth_anything_v2_{encoder_type}.pth', map_location='cpu'))
     model.to(DEVICE).eval()
 
 
@@ -71,7 +72,8 @@ if __name__ == "__main__":
         pass
 
     processes = []
-    NUM_GPUS = 8
+    # NUM_GPUS = 8
+    NUM_GPUS = 1
     PROCESSES_PER_GPU = 3
 
     for i, (process_id, image_list) in enumerate(tasks):
