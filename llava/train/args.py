@@ -48,13 +48,18 @@ class ModelArguments:
     mm_projector: Optional[str] = field(default="mlp2x_gelu")
 
     # NOTE(Zhouenshen): Add depth tower and projector arguments
-    depth_tower: Optional[str] = field(default="google/siglip-so400m-patch14-384")
-    depth_projector: Optional[str] = field(default="mlp2x_gelu")
+    spatial_tower: Optional[str] = field(default="Ruicheng/moge-2-vitl-normal")
+    spatial_projector: Optional[str] = field(default="mlp2x_gelu")
 
     mm_use_im_start_end: bool = field(default=False)
     mm_use_im_patch_token: bool = field(default=False)
     mm_vision_select_layer: Optional[int] = field(default=-1)  # default to the last layer
     mm_vision_select_feature: Optional[str] = field(default="patch")
+
+    # NOTE(Zhouenshen): Add spatial tower vision select feature arguments
+    spatial_tower_vision_select_feature: Optional[str] = field(default="patch")
+    spatial_tower_vision_num_tokens: Optional[int] = field(default=3600)
+
     vision_resolution: Optional[int] = field(default=-1)
     interpolate_mode: Optional[str] = field(default="linear")
     drop_path_rate: Optional[float] = field(default=0.0)
@@ -70,8 +75,8 @@ class ModelArguments:
     image_encoder: str = field(default='{"_target_": "llava.model.encoders.BasicImageEncoder"}')
     video_encoder: str = field(default='{"_target_": "llava.model.encoders.BasicVideoEncoder"}')
 
-    # NOTE(Zhouenshen): Add depth encoder arguments
-    depth_encoder: str = field(default='{"_target_": "llava.model.encoders.BasicImageEncoder"}')
+    # NOTE(Zhouenshen): Add spatial encoder arguments
+    spatial_encoder: str = field(default='{"_target_": "llava.model.encoders.BasicImageEncoder"}')
     s2_resize_output_to_scale_idx: int = field(default=0)
 
     # Quantization and low precision training
@@ -209,9 +214,8 @@ class ModelArguments:
     epsilon_optimizer: float = field(default=1e-15)
 
 
-    # NOTE(Zhouenshen): Add depth training
-    enable_depth: bool = field(default=True)
-    use_depth_tower: bool = field(default=True)
+    # NOTE(Zhouenshen): Add spatial training
+    enable_spatial: bool = field(default=True)
 
 @dataclass
 class TrainingArguments(transformers.TrainingArguments):
@@ -224,8 +228,8 @@ class TrainingArguments(transformers.TrainingArguments):
     tune_mm_projector: bool = field(default=False)
 
     # NOTE(Zhouenshen): Add depth tower and projector training arguments
-    tune_depth_tower: bool = field(default=False)
-    tune_depth_projector: bool = field(default=False)
+    tune_spatial_tower: bool = field(default=False)
+    tune_spatial_projector: bool = field(default=False)
 
     model_dtype: str = field(default="torch.bfloat16")
     model_max_length: int = field(

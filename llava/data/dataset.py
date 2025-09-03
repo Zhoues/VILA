@@ -39,9 +39,11 @@ from llava import conversation as conversation_lib
 from llava.constants import DEFAULT_DEPTH_TOKEN, DEFAULT_IMAGE_TOKEN, IGNORE_INDEX
 from llava.data.collate import DataCollator
 from llava.mm_utils import (
+    dynamic_process_images_and_prompt_for_spatial_encoder,
     dynamic_process_images_and_prompt,
     dynamic_process_depths_and_prompt,
     dynamic_s2_process_depths_and_prompt,
+    dynamic_s2_process_images_and_prompt_for_spatial_encoder,
     dynamic_s2_process_images_and_prompt,
     opencv_extract_frames,
     process_depth,
@@ -119,7 +121,7 @@ def preprocess_multimodal(sources: Sequence[str], data_args: DataArguments) -> D
 
     return sources
 
-def preprocess_rgbd(sources: Sequence[str], image_num: int, enable_depth: bool, data_args: DataArguments) -> Dict:
+def preprocess_rgbx(sources: Sequence[str], image_num: int, enable_new_modality: bool, data_args: DataArguments, special_token: str = DEFAULT_DEPTH_TOKEN) -> Dict:
     """
     Preprocesses conversations that may contain RGB-D tokens in the form "<image> <depth>\n".
     The goal is to move all occurrences of "<image> <depth>\n" (with exactly one space,
@@ -136,7 +138,7 @@ def preprocess_rgbd(sources: Sequence[str], image_num: int, enable_depth: bool, 
     if not is_multimodal:
         return sources
 
-    pattern = re.compile(rf"(?:{re.escape(DEFAULT_IMAGE_TOKEN)}|{re.escape(DEFAULT_DEPTH_TOKEN)})\n?")
+    pattern = re.compile(rf"(?:{re.escape(DEFAULT_IMAGE_TOKEN)}|{re.escape(special_token)})\n?")
     
     for source in sources:
         for sid, sentence in enumerate(source):
@@ -146,10 +148,10 @@ def preprocess_rgbd(sources: Sequence[str], image_num: int, enable_depth: bool, 
             # 2. 去除首尾的换行符（以及其他空白字符）
             text = text.strip()
             # 3. 根据 image_num 在文本前添加指定数量的前缀
-            if sid == 0 and enable_depth:
-                prefix = (f"{DEFAULT_IMAGE_TOKEN} {DEFAULT_DEPTH_TOKEN}\n") * image_num
+            if sid == 0 and enable_new_modality:
+                prefix = (f"{DEFAULT_IMAGE_TOKEN} {special_token}\n") * image_num
                 sentence["value"] = prefix + text
-            elif sid == 0 and not enable_depth:
+            elif sid == 0 and not enable_new_modality:
                 sentence["value"] = f"{DEFAULT_IMAGE_TOKEN}\n" * image_num + text
             else:
                 sentence["value"] = text
@@ -1407,9 +1409,9 @@ class LazySupervisedSpatialDataset(Dataset):
             # process conversations
             if enable_dynamic_res_s2 or enable_dynamic_res:
                 if isinstance(image_file, list):
-                    sources = preprocess_rgbd(copy.deepcopy([e["conversations"] for e in sources]), len(image_file), self.enable_depth, self.data_args)
+                    sources = preprocess_rgbx(copy.deepcopy([e["conversations"] for e in sources]), len(image_file), self.enable_depth, self.data_args)
                 else:
-                    sources = preprocess_rgbd(copy.deepcopy([e["conversations"] for e in sources]), 1, self.enable_depth, self.data_args)
+                    sources = preprocess_rgbx(copy.deepcopy([e["conversations"] for e in sources]), 1, self.enable_depth, self.data_args)
 
             # image is a list of images, depth is a list of depths
             if isinstance(image_file, list):
@@ -1470,6 +1472,150 @@ class LazySupervisedSpatialDataset(Dataset):
                 data_dict["block_sizes"] = block_sizes
                 if self.enable_depth:
                     data_dict["depth_block_sizes"] = depth_block_sizes
+        else:
+            # llava 1.5 way
+            # image does not exist in the data, but the model is multimodal
+            # crop_size = self.data_args.image_processor.crop_size
+            # data_dict['image'] = torch.zeros(3, crop_size['height'], crop_size['width'])
+            # vila way
+            data_dict["image"] = None
+            # raise NotImplementedError("SpatialDataset need image")
+
+        return data_dict
+
+
+
+# NOTE(Zhouenshen): GeometricDataset for single image
+class LazySupervisedGeometricDataset(Dataset):
+    def __init__(
+        self,
+        data_path: str,
+        image_folder: str,
+        tokenizer: transformers.PreTrainedTokenizer,
+        data_args: DataArguments,
+        training_args: TrainingArguments,
+    ):
+        
+        super().__init__()
+        warnings.warn("Loading GeometricDataset data...")
+
+        # load the conversation data from *.json
+        with open(data_path) as f:
+            list_data_dict = json.load(f)
+
+        print("Total GeometricDataset Samples ", len(list_data_dict), " ", data_path)
+        warnings.warn("Formatting inputs...Skip in lazy mode")
+
+        self.tokenizer = tokenizer
+        self.list_data_dict = list_data_dict
+        self.data_args = data_args
+        self.image_folder = image_folder
+
+        # NOTE(Zhouenshen): Add boolean flag to check if spatial encoding is enabled.
+        self.enable_spatial = self.data_args.enable_spatial
+        
+    def __len__(self):
+        return len(self.list_data_dict)
+
+    @property
+    def lengths(self):
+        length_list = []
+        for sample in self.list_data_dict:
+            img_tokens = 128 if "image" in sample else 0
+            length_list.append(sum(len(conv["value"].split()) for conv in sample["conversations"]) + img_tokens)
+        return length_list
+
+    @property
+    def modality_lengths(self):
+        length_list = []
+        for sample in self.list_data_dict:
+            cur_len = sum(len(conv["value"].split()) for conv in sample["conversations"])
+            cur_len = cur_len if "image" in sample else -cur_len
+            length_list.append(cur_len)
+        return length_list
+
+
+    def __getitem__(self, i) -> Dict[str, torch.Tensor]:
+        sources = self.list_data_dict[i]
+        if isinstance(i, int):
+            sources = [sources]
+        assert len(sources) == 1, "Don't know why it is wrapped to a list"  # FIXME
+
+        enable_dynamic_res = self.data_args.image_aspect_ratio == "dynamic"
+        enable_dynamic_res_s2 = self.data_args.image_aspect_ratio == "dynamic_s2"
+
+        assert enable_dynamic_res == True or enable_dynamic_res_s2 == True, "GeometricDataset do not need to resize image"
+
+        if "image" in sources[0]:
+            
+            image_file = self.list_data_dict[i]["image"]
+
+            # process conversations
+            if enable_dynamic_res_s2 or enable_dynamic_res:
+                if isinstance(image_file, list):
+                    sources = preprocess_rgbx(copy.deepcopy([e["conversations"] for e in sources]), len(image_file), self.enable_spatial, self.data_args, special_token=DEFAULT_DEPTH_TOKEN)
+                else:
+                    sources = preprocess_rgbx(copy.deepcopy([e["conversations"] for e in sources]), 1, self.enable_spatial, self.data_args, special_token=DEFAULT_DEPTH_TOKEN)
+
+            # image is a list of images, depth is a list of depths
+            if isinstance(image_file, list):
+                # if enable_dynamic_res_s2:
+                #     processed_images, block_sizes = dynamic_s2_process_images_and_prompt(image_file, sources[0][0]["value"], self.data_args, self.image_folder)
+                #     if self.enable_spatial:
+                #         processed_depths, depth_block_sizes = dynamic_s2_process_images_and_prompt_for_spatial_encoder(image_file, sources[0][0]["value"], self.data_args, self.image_folder)
+                if enable_dynamic_res:
+                    processed_images, sources[0][0]["value"] = dynamic_process_images_and_prompt(image_file, sources[0][0]["value"], self.data_args, self.image_folder)
+                    if self.enable_spatial:
+                        processed_images_for_spatial_encoder, sources[0][0]["value"] = dynamic_process_images_and_prompt_for_spatial_encoder(image_file, sources[0][0]["value"], self.data_args, self.image_folder)
+                # else:
+                #     processed_images = torch.stack([process_image(img, self.data_args, self.image_folder) for img in image_file])
+                #     if self.enable_spatial:
+                #         processed_depths = torch.stack([process_depth(depth, self.data_args, self.image_folder) for depth in image_file])
+            else:
+                # if enable_dynamic_res_s2:
+                #     processed_images, block_sizes = dynamic_s2_process_images_and_prompt([image_file], sources[0][0]["value"], self.data_args, self.image_folder)
+                #     if self.enable_spatial:
+                #         processed_depths, depth_block_sizes = dynamic_s2_process_images_and_prompt_for_spatial_encoder([image_file], sources[0][0]["value"], self.data_args, self.image_folder)
+                if enable_dynamic_res:
+                    processed_images, sources[0][0]["value"] = dynamic_process_images_and_prompt([image_file], sources[0][0]["value"], self.data_args, self.image_folder)
+                    if self.enable_spatial:
+                        processed_images_for_spatial_encoder, sources[0][0]["value"] = dynamic_process_images_and_prompt_for_spatial_encoder([image_file], sources[0][0]["value"], self.data_args, self.image_folder)
+                # else:
+                #     processed_images = process_image(image_file, self.data_args, self.image_folder)
+                #     if self.enable_spatial:
+                #         processed_depths = process_depth(image_file, self.data_args, self.image_folder)
+        else:
+            print(colored("No image in the data. If this dataset is not spatial dataset (e.g. LLaVA 1.5), please check the data format.", "red"))
+            sources = copy.deepcopy([e["conversations"] for e in sources])
+            # raise NotImplementedError("SpaitalDataset need at least any image")
+        # except:
+        #     print("got bad image or depth...get another one...")
+        #     return self.__getitem__(random.randint(0, len(self.list_data_dict)))
+
+        data_dict = preprocess(
+            sources,
+            self.tokenizer,
+            has_image=("image" in self.list_data_dict[i]),
+        )
+
+        if isinstance(i, int):
+            data_dict = dict(input_ids=data_dict["input_ids"][0], labels=data_dict["labels"][0])
+
+
+        # image exist in the data
+        if "image" in self.list_data_dict[i]:
+            if processed_images is None or len(processed_images.shape) == 4:
+                data_dict["image"] = processed_images
+                if self.enable_spatial:
+                    data_dict['spatial'] = processed_images_for_spatial_encoder
+            else:
+                data_dict["image"] = processed_images.unsqueeze(0)
+                if self.enable_spatial:
+                    data_dict['spatial'] = processed_images_for_spatial_encoder.unsqueeze(0)
+            # if enable_dynamic_res_s2:
+            #     data_dict["block_sizes"] = block_sizes
+            #     if self.enable_spatial:
+            #         data_dict["depth_block_sizes"] = depth_block_sizes
         else:
             # llava 1.5 way
             # image does not exist in the data, but the model is multimodal

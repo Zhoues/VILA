@@ -139,12 +139,12 @@ def load_pretrained_model(
 
     if is_mm_model(model_path):
         # NOTE(Zhouenshen): Add Special Token for llm tokenizer and vision tower
-        enable_depth = getattr(model.config, "enable_depth", False)
-        if enable_depth:
+        enable_spatial = getattr(model.config, "enable_spatial", False)
+        if enable_spatial:
             num_new_tokens = tokenizer.add_tokens([DEFAULT_DEPTH_TOKEN], special_tokens=True)            
-            # record depth token id in media token ids
-            tokenizer.media_token_ids["depth"] = tokenizer.convert_tokens_to_ids(DEFAULT_DEPTH_TOKEN)
-            tokenizer.media_tokens["depth"] = DEFAULT_DEPTH_TOKEN
+            # record spatial token id in media token ids
+            tokenizer.media_token_ids["spatial"] = tokenizer.convert_tokens_to_ids(DEFAULT_DEPTH_TOKEN)
+            tokenizer.media_tokens["spatial"] = DEFAULT_DEPTH_TOKEN
 
         model.resize_token_embeddings(len(tokenizer))
         vision_tower = model.get_vision_tower()
@@ -154,13 +154,13 @@ def load_pretrained_model(
         mm_projector.to(device=device, dtype=torch.float16)
         # mm_projector.to(device=device, dtype=torch.bfloat16)
 
-        if model.get_depth_tower() is not None:
-            depth_tower = model.get_depth_tower()
-            depth_tower.to(device=device, dtype=torch.float16)
+        if model.get_spatial_tower() is not None:
+            spatial_tower = model.get_spatial_tower()
+            spatial_tower.to(device=device, dtype=torch.float16)
         
-        if model.get_depth_projector() is not None:
-            depth_projector = model.get_depth_projector()
-            depth_projector.to(device=device, dtype=torch.float16)
+        if model.get_spatial_projector() is not None:
+            spatial_projector = model.get_spatial_projector()
+            spatial_projector.to(device=device, dtype=torch.float16)
 
         image_processor = vision_tower.image_processor
 

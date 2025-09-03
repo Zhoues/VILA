@@ -25,8 +25,12 @@ class Dataset:
     data_path: str = field(default=None, metadata={"help": "Path to the training data."})
     meta_path: str = field(default=None, metadata={"help": "Path to the meta data for webdataset."})
     image_path: str = field(default=None, metadata={"help": "Path to the training image data."})
+
     # NOTE(Zhouenshen): Add the depth path for spatialdataset
     depth_path: str = field(default=None, metadata={"help": "Path to the training depth data."})
+    # NOTE(Zhouenshen): Add the enable_spatial flag for whether to use spatial encoder.
+    enable_spatial: bool = field(default=False, metadata={"help": "Whether to use spatial encoder."})
+
     caption_choice: str = field(default=None, metadata={"help": "Path to the caption directory for recaption."})
     description: str = field(
         default=None,
@@ -158,7 +162,7 @@ def register_datasets_mixtures():
 
     ca1m_vacant_qa_121k = Dataset(
         dataset_name="ca1m_vacant_qa_121k",
-        dataset_type="spatialdataset",   
+        dataset_type="geometricdataset",   
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
         depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths",    
@@ -168,7 +172,7 @@ def register_datasets_mixtures():
 
     ca1m_vacant_qa_121k_RGB = Dataset(
         dataset_name="ca1m_vacant_qa_121k_RGB",
-        dataset_type="spatialdataset",   
+        dataset_type="geometricdataset",   
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images"
     )
@@ -327,23 +331,23 @@ def register_datasets_mixtures():
 
     ### SAT (Dynamic 2D Dataset)
 
-    sat_176k = Dataset(
-        dataset_name="sat_176k",
-        dataset_type="spatialdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/metadata.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images",
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/depths",
-        description="176k SFT data w/ depth from SAT."
-    )
-    add_dataset(sat_176k)
+    # sat_176k = Dataset(
+    #     dataset_name="sat_176k",
+    #     dataset_type="spatialdataset",
+    #     data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/metadata.json",
+    #     image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images",
+    #     depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/depths",
+    #     description="176k SFT data w/ depth from SAT."
+    # )
+    # add_dataset(sat_176k)
 
-    sat_176k_RGB = Dataset(
-        dataset_name="sat_176k_RGB",
-        dataset_type="spatialdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/metadata.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images"
-    )
-    add_dataset(sat_176k_RGB)
+    # sat_176k_RGB = Dataset(
+    #     dataset_name="sat_176k_RGB",
+    #     dataset_type="spatialdataset",
+    #     data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/metadata.json",
+    #     image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images"
+    # )
+    # add_dataset(sat_176k_RGB)
   
 
 
@@ -445,3 +449,32 @@ def register_datasets_mixtures():
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/RoboRefer_train_data",
     )
     add_dataset(refspatial_old_placemennt_old_sim)
+
+
+    human_qa_4k_RGB = Dataset(
+        dataset_name="human_qa_4k_RGB",
+        dataset_type="spatialdataset",   
+        data_path="/share/project/hanyi/dataset/synthetic_images_with_human/metadata.json",
+        image_path="/share/project/hanyi/dataset/synthetic_images_with_human/images_with_human"
+    )
+    add_dataset(human_qa_4k_RGB)
+
+
+    sat_176k = Dataset(
+        dataset_name="sat_176k",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/metadata.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images",
+        enable_spatial=True,
+        description="176k SFT data w/ depth from SAT."
+    )
+    add_dataset(sat_176k)
+
+    sat_176k_RGB = Dataset(
+        dataset_name="sat_176k_RGB",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/metadata.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images",
+        enable_spatial=True,
+    )
+    add_dataset(sat_176k_RGB)

@@ -656,15 +656,15 @@ def train():
             model.get_mm_projector().requires_grad_(training_args.tune_mm_projector)
             mprint(f"vision tower {training_args.tune_vision_tower}")
             mprint(f"mm projector {training_args.tune_mm_projector}")
-        if model.get_depth_tower():
-            model.get_depth_tower().requires_grad_(training_args.tune_depth_tower)
-            mprint(f"depth tower {training_args.tune_depth_tower}")
-        if model.get_depth_projector():
-            model.get_depth_projector().requires_grad_(training_args.tune_depth_projector)
-            mprint(f"depth projector {training_args.tune_depth_projector}")
+        if model.get_spatial_tower():
+            model.get_spatial_tower().requires_grad_(training_args.tune_spatial_tower)
+            mprint(f"spatial tower {training_args.tune_spatial_tower}")
+        if model.get_spatial_projector():
+            model.get_spatial_projector().requires_grad_(training_args.tune_spatial_projector)
+            mprint(f"spatial projector {training_args.tune_spatial_projector}")
 
         if not any(
-            [training_args.tune_language_model, training_args.tune_vision_tower, training_args.tune_mm_projector, training_args.tune_depth_tower, training_args.tune_depth_projector]
+            [training_args.tune_language_model, training_args.tune_vision_tower, training_args.tune_mm_projector, training_args.tune_spatial_tower, training_args.tune_spatial_projector]
         ):
             logging.warning("You are not tuning any part of the model. Please check if this is intended.")
         else:
@@ -720,17 +720,17 @@ def train():
 
         num_new_tokens = 0
         
-        if model_args.enable_depth:
+        if model_args.enable_spatial:
             num_new_tokens = tokenizer.add_tokens([DEFAULT_DEPTH_TOKEN], special_tokens=True)
             # record depth token id in media token ids
-            tokenizer.media_token_ids["depth"] = tokenizer.convert_tokens_to_ids(DEFAULT_DEPTH_TOKEN)
-            tokenizer.media_tokens["depth"] = DEFAULT_DEPTH_TOKEN
+            tokenizer.media_token_ids['spatial'] = tokenizer.convert_tokens_to_ids(DEFAULT_DEPTH_TOKEN)
+            tokenizer.media_tokens['spatial'] = DEFAULT_DEPTH_TOKEN
         
         model.resize_token_embeddings(len(tokenizer))
 
         # NOTE(Zhouenshen): fintune llm input embedding
-        if num_new_tokens > 0 and training_args.tune_depth_projector:
-            mprint(f"Add Depth token id: {tokenizer.media_token_ids['depth']}")
+        if num_new_tokens > 0 and training_args.tune_spatial_projector:
+            mprint(f"Add Depth (Spatial) token id: {tokenizer.media_token_ids['spatial']}")
             # embedding_layer = model.get_input_embeddings()  # Embedding layer, shape: [vocab_size, embedding_dim]
             # embedding_weight = embedding_layer.weight  # parameter: shape [vocab_size, hidden_size]
             # embedding_weight.requires_grad = True

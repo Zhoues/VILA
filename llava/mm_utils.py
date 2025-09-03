@@ -21,6 +21,7 @@ import os
 import re
 import tempfile
 from io import BytesIO
+import cv2
 
 import numpy as np
 import torch
@@ -437,6 +438,36 @@ def dynamic_process_depths_and_prompt(depths, prompt, data_args, depth_folder=No
         prompt = prompt.replace(DEFAULT_DEPTH_TOKEN, "")
     return all_depths, prompt
 
+
+def dynamic_process_images_and_prompt_for_spatial_encoder(images, prompt, data_args, image_folder=None, max_tiles=None):
+    all_images = []
+    for image in images:
+
+        if isinstance(image, str):
+            # NOTE(Zhouenshen): 使用 MoGe-2 的方式处理图片
+            if image_folder is not None:
+                image_path = os.path.join(image_folder, image)
+                image_img = Image.open(image_path).convert("RGB")  # 确保是 RGB 格式
+            else:
+                image_img = Image.open(image).convert("RGB")  # 确保是 RGB 格式
+        elif isinstance(image, Image.Image):
+            image_img = image.convert("RGB")
+            image_img = image
+        else:
+            raise ValueError(f"Invalid image type: {type(image)}")
+
+        image_np = np.array(image_img) / 255.0  # shape: (H, W, 3), dtype: float64
+        processed_images = torch.tensor(image_np, dtype=torch.float32).permute(2, 0, 1).unsqueeze(0)
+        all_images.append(processed_images)
+
+    if all_images:
+        all_images = torch.cat(all_images)
+    else:
+        all_images = None
+
+    return all_images, prompt
+
+
 def dynamic_s2_process_images_and_prompt(images, prompt, data_args, image_folder=None):
     idx = 0
     all_images = []
@@ -465,6 +496,31 @@ def dynamic_s2_process_depths_and_prompt(depths, prompt, data_args, depth_folder
         all_depths = torch.cat(all_depths)
     else:
         all_depths = None
+    return all_depths, all_block_size
+
+def dynamic_s2_process_images_and_prompt_for_spatial_encoder(images, prompt, data_args, image_folder=None):
+    all_images = []
+    all_block_size = []
+    for image in images:
+
+        # NOTE(Zhouenshen): 使用 MoGe-2 的方式处理图片
+        if image_folder is not None:
+            image_path = os.path.join(image_folder, image)
+            depth_img = Image.open(depth_path).convert("RGB")  # 确保是 RGB 格式
+            depth_np = np.array(depth_img) / 255.0  # shape: (H, W, 3), dtype: float64
+            processed_depths = torch.tensor(depth_np, dtype=torch.float32).permute(2, 0, 1).unsqueeze(0)
+        else:
+            image_img = Image.open(image).convert("RGB")  # 确保是 RGB 格式
+            depth_np = np.array(depth_img) / 255.0  # shape: (H, W, 3), dtype: float64
+            processed_depths = torch.tensor(depth_np, dtype=torch.float32).permute(2, 0, 1).unsqueeze(0)
+
+        all_depths.append(processed_depths)
+
+    if all_depths:
+        all_depths = torch.cat(all_depths)
+    else:
+        all_depths = None
+
     return all_depths, all_block_size
 
 

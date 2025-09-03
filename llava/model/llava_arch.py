@@ -32,11 +32,12 @@ from transformers import AutoConfig, GenerationConfig, LogitsProcessor
 from transformers.modeling_utils import ContextManagers, no_init_weights
 
 from llava.constants import DEFAULT_DEPTH_TOKEN, DEFAULT_IMAGE_TOKEN, IGNORE_INDEX, NUM_EXTRA_TOKENS
-from llava.mm_utils import dynamic_process_depths_and_prompt, dynamic_process_images_and_prompt, dynamic_s2_process_depths_and_prompt, dynamic_s2_process_images_and_prompt, process_depth, process_image, process_images, process_rgbd_inference_conversation
+from llava.mm_utils import dynamic_process_depths_and_prompt, dynamic_process_images_and_prompt, dynamic_s2_process_depths_and_prompt, dynamic_s2_process_images_and_prompt, dynamic_process_images_and_prompt_for_spatial_encoder, process_depth, process_image, process_images, process_rgbd_inference_conversation
 from llava.model.configuration_llava import LlavaConfig, ResponseFormat
 from llava.model.language_model.builder import build_llm_and_tokenizer
 from llava.model.multimodal_encoder.builder import build_vision_tower
 from llava.model.multimodal_projector.builder import build_mm_projector
+from llava.model.multimodal_spatialencoder.build import build_spatial_tower
 from llava.model.utils import get_model_config
 from llava.train.sequence_parallel import get_pg_manager
 from llava.utils import distributed as dist
@@ -47,7 +48,7 @@ from llava.utils.tokenizer import tokenize_conversation
 class LlavaMetaModel(ABC):
     def init_vlm(self, config, *args, **kwargs):
         # TODO(ligeng): figure out how from_config and from_pretrained works in HF implementation.
-        if hasattr(self, "llm") or hasattr(self, "vision_tower") or hasattr(self, "mm_projector") or hasattr(self, "depth_tower") or hasattr(self, "depth_projector"):
+        if hasattr(self, "llm") or hasattr(self, "vision_tower") or hasattr(self, "mm_projector") or hasattr(self, "spatial_tower") or hasattr(self, "spatial_projector"):
             # already initialized, skipped
             return
 
@@ -58,15 +59,15 @@ class LlavaMetaModel(ABC):
 
         cfgs = get_model_config(config)
         if len(cfgs) == 5:
-            llm_cfg, vision_tower_cfg, mm_projector_cfg, depth_tower_cfg, depth_projector_cfg = cfgs
+            llm_cfg, vision_tower_cfg, mm_projector_cfg, spatial_tower_cfg, spatial_projector_cfg = cfgs
         elif len(cfgs) == 4:
-            llm_cfg, vision_tower_cfg, mm_projector_cfg, depth_projector_cfg = cfgs
-            depth_tower_cfg = None
+            llm_cfg, vision_tower_cfg, mm_projector_cfg, spatial_projector_cfg = cfgs
+            spatial_tower_cfg = None
         elif len(cfgs) == 3:
             llm_cfg, vision_tower_cfg, mm_projector_cfg = cfgs
-            depth_tower_cfg, depth_projector_cfg = None, None
+            spatial_tower_cfg, spatial_projector_cfg = None, None
         else:
-            raise ValueError("`llm_cfg` `mm_projector_cfg` `vision_tower_cfg` `depth_tower_cfg` `depth_projector_cfg` not found in the config.")
+            raise ValueError("`llm_cfg` `mm_projector_cfg` `vision_tower_cfg` `spatial_tower_cfg` `spatial_projector_cfg` not found in the config.")
 
         # print("Before init in Config")
         # if hasattr(config, "deepspeed") and "mics" in config.deepspeed:
@@ -77,7 +78,6 @@ class LlavaMetaModel(ABC):
         #         self.vision_tower = build_vision_tower(vision_tower_cfg, config)
         #         self.mm_projector = build_mm_projector(mm_projector_cfg, config)
         # else:
-
         # NOTE(Zhouenshen): build all components of VLM, including LLM, Vision Tower, and MM Projector
         self.llm, self.tokenizer = build_llm_and_tokenizer(llm_cfg, config, *args, **kwargs)
         self.vision_tower = build_vision_tower(vision_tower_cfg, config)
@@ -85,25 +85,24 @@ class LlavaMetaModel(ABC):
 
         # NOTE(ligeng): for xgrammer init, <image> <vila/video> and <vila/sentinel>
         self.vocab_size = config.llm_cfg["vocab_size"] + NUM_EXTRA_TOKENS
-        if hasattr(config, "enable_depth") and config.enable_depth:
+        if hasattr(config, "enable_spatial") and config.enable_spatial:
             self.vocab_size = self.vocab_size + 1
 
-        # NOTE(Zhouenshen): Load depth tower and projector ckpt if provided
-        if hasattr(config, "enable_depth") and config.enable_depth:
-            self.depth_projector = build_mm_projector(depth_projector_cfg, config)
+        # NOTE(Zhouenshen): Load spatial tower and projector ckpt if provided
+        if hasattr(config, "enable_spatial") and config.enable_spatial:
+            self.spatial_tower = build_spatial_tower(spatial_tower_cfg, config)
+            self.spatial_projector = build_mm_projector(spatial_projector_cfg, config)
         else:
-            self.depth_projector = None
-        if hasattr(config, "use_depth_tower") and config.use_depth_tower:
-            self.depth_tower = build_vision_tower(depth_tower_cfg, config)
-        else:
-            self.depth_tower = None
+            self.spatial_tower = None
+            self.spatial_projector = None
 
-        # NOTE(Zhouenshen): tune_depth_tower must be set if use_depth_tower is True
-        if hasattr(config, "tune_depth_tower") and config.tune_depth_tower:
-            assert hasattr(config, "use_depth_tower") and config.use_depth_tower, "tune_depth_tower must be set if use_depth_tower is True"
+
+        # NOTE(Zhouenshen): tune_spatial_tower must be set True if enable_spatial is True
+        if hasattr(config, "tune_spatial_tower") and config.tune_spatial_tower:
+            assert hasattr(config, "enable_spatial") and config.enable_spatial, "tune_spatial_tower must be set if enable_spatial is True"
 
         self.encoders = {}
-        for name in ["image", "video", "depth"]:
+        for name in ["image", "video", 'spatial']:
             config = getattr(self.config, f"{name}_encoder")
             if isinstance(config, str):
                 config = json.loads(config)
@@ -114,7 +113,7 @@ class LlavaMetaModel(ABC):
         self.is_loaded = True
 
         assert (
-            self.llm is not None or self.vision_tower is not None or self.mm_projector is not None or self.depth_tower is not None or self.depth_projector is not None
+            self.llm is not None or self.vision_tower is not None or self.mm_projector is not None or self.spatial_tower is not None or self.spatial_projector is not None
         ), "At least one of the components must be instantiated."
 
     @classmethod
@@ -143,15 +142,15 @@ class LlavaMetaModel(ABC):
 
         cfgs = get_model_config(config)
         if len(cfgs) == 5:
-            llm_cfg, vision_tower_cfg, mm_projector_cfg, depth_tower_cfg, depth_projector_cfg = cfgs
+            llm_cfg, vision_tower_cfg, mm_projector_cfg, spatial_tower_cfg, spatial_projector_cfg = cfgs
         elif len(cfgs) == 4:
-            llm_cfg, vision_tower_cfg, mm_projector_cfg, depth_projector_cfg = cfgs
-            depth_tower_cfg = None
+            llm_cfg, vision_tower_cfg, mm_projector_cfg, spatial_projector_cfg = cfgs
+            spatial_tower_cfg = None
         elif len(cfgs) == 3:
             llm_cfg, vision_tower_cfg, mm_projector_cfg = cfgs
-            depth_tower_cfg, depth_projector_cfg = None, None
+            spatial_tower_cfg, spatial_projector_cfg = None, None
         else:
-            raise ValueError("`llm_cfg` `mm_projector_cfg` `vision_tower_cfg` `depth_tower_cfg` `depth_projector_cfg` not found in the config.")
+            raise ValueError("`llm_cfg` `mm_projector_cfg` `vision_tower_cfg` `spatial_tower_cfg` `spatial_projector_cfg` not found in the config.")
 
         # print(llm_cfg, vision_tower_cfg, mm_projector_cfg); input("DEBUG load_pretrained")
         init_context = [
@@ -166,7 +165,7 @@ class LlavaMetaModel(ABC):
             vlm = cls(config, *args, **kwargs)
         # print(llm_cfg, vision_tower_cfg, mm_projector_cfg); input("DEBUG load_pretrained finish")
 
-        if hasattr(vlm, "llm") or hasattr(vlm, "vision_tower") or hasattr(vlm, "mm_projector") or hasattr(vlm, "depth_tower") or hasattr(vlm, "depth_projector"):
+        if hasattr(vlm, "llm") or hasattr(vlm, "vision_tower") or hasattr(vlm, "mm_projector") or hasattr(vlm, "spatial_tower") or hasattr(vlm, "spatial_projector"):
             if vlm.is_loaded:
                 return vlm
 
@@ -174,22 +173,20 @@ class LlavaMetaModel(ABC):
         vlm.vision_tower = build_vision_tower(vision_tower_cfg, config)
         vlm.mm_projector = build_mm_projector(mm_projector_cfg, config)
 
-        # NOTE(Zhouenshen): Add depth tower and projector
-        if hasattr(config, "enable_depth") and config.enable_depth:
-            vlm.depth_projector = build_mm_projector(depth_projector_cfg, config)
+        # NOTE(Zhouenshen): Add spatial tower and projector
+        if hasattr(config, "enable_spatial") and config.enable_spatial:
+            vlm.spatial_projector = build_mm_projector(spatial_projector_cfg, config)
+            vlm.spatial_tower = build_spatial_tower(spatial_tower_cfg, config)
         else:
-            vlm.depth_projector = None
-        if hasattr(config, "use_depth_tower") and config.use_depth_tower:
-            vlm.depth_tower = build_vision_tower(depth_tower_cfg, config)
-        else:
-            vlm.depth_tower = None
+            vlm.spatial_tower = None
+            vlm.spatial_projector = None
 
         self.post_config()
         self.is_loaded = True
 
         # FIXME(ligeng, yunhao): llm should never be none here.
         assert (
-            vlm.llm is not None or vlm.vision_tower is not None or vlm.mm_projector is not None or vlm.depth_tower is not None or vlm.depth_projector is not None
+            vlm.llm is not None or vlm.vision_tower is not None or vlm.mm_projector is not None or vlm.spatial_tower is not None or vlm.spatial_projector is not None
         ), "At least one of the components must be instantiated."
         return vlm
 
@@ -239,45 +236,40 @@ class LlavaMetaModel(ABC):
             )
             self.config.mm_projector_cfg = self.mm_projector.config
         
-        if self.get_depth_tower():
-            print(f"saving depth_tower to {osp.join(output_dir, 'depth_tower')}")
-            self.depth_tower.config._name_or_path = osp.join(output_dir, "depth_tower")
-            depth_tower_state_dict = OrderedDict(
-                {k.split("depth_tower.vision_tower.")[-1]: v for k, v in state_dict.items() if "depth_tower" in k}
+        if self.get_spatial_projector():
+            print(f"saving spatial_projector to {osp.join(output_dir, 'spatial_projector')}")
+            self.spatial_projector.config._name_or_path = osp.join(output_dir, "spatial_projector")
+            spatial_projector_state_dict = OrderedDict(
+                {k.split("spatial_projector.")[-1]: v for k, v in state_dict.items() if "spatial_projector" in k}
             )
-            self.depth_tower.vision_tower.save_pretrained(
-                os.path.join(output_dir, "depth_tower"),
-                state_dict=depth_tower_state_dict,
+            self.spatial_projector.save_pretrained(
+                os.path.join(output_dir, "spatial_projector"),
+                state_dict=spatial_projector_state_dict,
             )
-            self.depth_tower.image_processor.save_pretrained(os.path.join(output_dir, "depth_tower"))
-            self.config.depth_tower_cfg = self.depth_tower.config
-            if hasattr(self.config.depth_tower_cfg, "auto_map"):
-                if "radio" not in self.get_depth_tower().__class__.__name__.lower():
-                    delattr(self.config.depth_tower_cfg, "auto_map")
+            self.config.spatial_projector_cfg = self.spatial_projector.config
 
-        if self.get_depth_projector():
-            print(f"saving depth_projector to {osp.join(output_dir, 'depth_projector')}")
-            self.depth_projector.config._name_or_path = osp.join(output_dir, "depth_projector")
-            depth_projector_state_dict = OrderedDict(
-                {k.split("depth_projector.")[-1]: v for k, v in state_dict.items() if "depth_projector" in k}
+        if self.get_spatial_tower():
+            print(f"saving spatial_tower to {osp.join(output_dir, 'spatial_tower')}")
+            self.spatial_tower.config._name_or_path = osp.join(output_dir, "spatial_tower")
+            spatial_tower_state_dict = OrderedDict(
+                {k.split("spatial_tower.spatial_tower.")[-1]: v for k, v in state_dict.items() if "spatial_tower" in k}
             )
-            self.depth_projector.save_pretrained(
-                os.path.join(output_dir, "depth_projector"),
-                state_dict=depth_projector_state_dict,
+            self.spatial_tower.save_pretrained(
+                os.path.join(output_dir, "spatial_tower"),
+                state_dict=spatial_tower_state_dict,
             )
-            self.config.depth_projector_cfg = self.depth_projector.config
+            # self.spatial_tower.image_processor.save_pretrained(os.path.join(output_dir, "spatial_tower"))
+            self.config.spatial_tower_cfg = self.spatial_tower.config
+            if hasattr(self.config.spatial_tower_cfg, "auto_map"):
+                if "radio" not in self.get_spatial_tower().__class__.__name__.lower():
+                    delattr(self.config.spatial_tower_cfg, "auto_map")
 
 
         # NOTE(Zhouenshen): Add depth for saving ckpt
-        if hasattr(self.config, "enable_depth") and self.config.enable_depth:
+        if hasattr(self.config, "enable_spatial") and self.config.enable_spatial:
             self.config.enable_depth = True
         else:
-            self.config.enable_depth = False
-
-        if hasattr(self.config, "use_depth_tower") and self.config.use_depth_tower:
-            self.config.use_depth_tower = True
-        else:
-            self.config.use_depth_tower = False
+            self.config.enable_spatial = False
 
         ## update and save top-level config
         self.config._name_or_path = output_dir
@@ -306,17 +298,17 @@ class LlavaMetaModel(ABC):
             mm_projector = mm_projector[0]
         return mm_projector
 
-    def get_depth_tower(self):
-        depth_tower = getattr(self, "depth_tower", None)
-        if type(depth_tower) is list:
-            depth_tower = depth_tower[0]
-        return depth_tower
+    def get_spatial_tower(self):
+        spatial_tower = getattr(self, "spatial_tower", None)
+        if type(spatial_tower) is list:
+            spatial_tower = spatial_tower[0]
+        return spatial_tower
 
-    def get_depth_projector(self):
-        depth_projector = getattr(self, "depth_projector", None)
-        if type(depth_projector) is list:
-            depth_projector = depth_projector[0]
-        return depth_projector
+    def get_spatial_projector(self):
+        spatial_projector = getattr(self, "spatial_projector", None)
+        if type(spatial_projector) is list:
+            spatial_projector = spatial_projector[0]
+        return spatial_projector
 
     def post_config(self):
         self.training = self.get_llm().training
@@ -327,10 +319,10 @@ class LlavaMetaModel(ABC):
             self.config.vision_tower_cfg = self.vision_tower.config
         if getattr(self.config, "mm_projector_cfg", None) is None:
             self.config.mm_projector_cfg = self.mm_projector.config
-        if getattr(self.config, "depth_tower_cfg", None) is None and self.depth_tower is not None:
-            self.config.depth_tower_cfg = self.depth_tower.config
-        if getattr(self.config, "depth_projector_cfg", None) is None and self.depth_projector is not None:
-            self.config.depth_projector_cfg = self.depth_projector.config
+        if getattr(self.config, "spatial_tower_cfg", None) is None and self.spatial_tower is not None:
+            self.config.spatial_tower_cfg = self.spatial_tower.config
+        if getattr(self.config, "spatial_projector_cfg", None) is None and self.spatial_projector is not None:
+            self.config.spatial_projector_cfg = self.spatial_projector.config
 
     def freezed_module_patch(self):
         """
@@ -345,11 +337,11 @@ class LlavaMetaModel(ABC):
             if self.get_mm_projector() and not getattr(self.config, "tune_mm_projector", False):
                 self.get_mm_projector().eval()
             
-            # NOTE(Zhouenshen): When depth tower and projector are not used, we need to freeze them
-            if self.get_depth_tower() and not getattr(self.config, "tune_depth_tower", False):
-                self.get_depth_tower().eval()
-            if self.get_depth_projector() and not getattr(self.config, "tune_depth_projector", False):
-                self.get_depth_projector().eval()
+            # NOTE(Zhouenshen): When spatial tower and projector are not used, we need to freeze them
+            if self.get_spatial_tower() and not getattr(self.config, "tune_spatial_tower", False):
+                self.get_spatial_tower().eval()
+            if self.get_spatial_projector() and not getattr(self.config, "tune_spatial_projector", False):
+                self.get_spatial_projector().eval()
 
     @staticmethod
     def merge_chessboard(x, num_split_h, num_split_w):
@@ -394,118 +386,121 @@ class LlavaMetaModel(ABC):
         )
         return x_split
 
-    def merge_features_for_dynamic_s2(self, image_features, block_sizes, is_depth: bool = False, use_depth_tower: bool = True):
-        if is_depth and use_depth_tower:
-            scales = self.get_depth_tower().scales
-            resize_output_to_scale_idx = self.get_depth_tower().resize_output_to_scale_idx
-        else:
-            scales = self.get_vision_tower().scales
-            resize_output_to_scale_idx = self.get_vision_tower().resize_output_to_scale_idx
+    # def merge_features_for_dynamic_s2(self, image_features, block_sizes, is_spatial: bool = False, use_depth_tower: bool = True):
+    #     if is_spatial and use_depth_tower:
+    #         scales = self.get_depth_tower().scales
+    #         resize_output_to_scale_idx = self.get_depth_tower().resize_output_to_scale_idx
+    #     else:
+    #         scales = self.get_vision_tower().scales
+    #         resize_output_to_scale_idx = self.get_vision_tower().resize_output_to_scale_idx
         
-        image_features_each_image = []
-        new_block_sizes = []
-        block_cnt = 0
-        for block_size_each_image in block_sizes:
-            if block_size_each_image is None:
-                cur_features = image_features[block_cnt : block_cnt + 1]
-                cur_features = rearrange(cur_features, "1 (h w) c -> 1 c h w", h=int(cur_features.shape[1] ** 0.5))
-                cur_features = cur_features.repeat(1, len(scales), 1, 1)
-                image_features_each_image.append(cur_features)
-                new_block_sizes.append((1, 1))
-                block_cnt += 1
-            else:
-                cur_features_each_scale = []
-                for scale in scales[:-1]:
-                    num_blocks_this_scale = (scale // scales[0]) ** 2
-                    cur_features_each_scale.append(
-                        self.merge_chessboard(
-                            image_features[block_cnt : block_cnt + num_blocks_this_scale],
-                            num_split_h=scale // scales[0],
-                            num_split_w=scale // scales[0],
-                        )
-                    )  # 1 * C * H * W
-                    block_cnt += num_blocks_this_scale
-                num_blocks_last_scale = block_size_each_image[0] * block_size_each_image[1]
-                cur_features_each_scale.append(
-                    self.merge_chessboard(
-                        image_features[block_cnt : block_cnt + num_blocks_last_scale],
-                        num_split_h=block_size_each_image[0],
-                        num_split_w=block_size_each_image[1],
-                    )
-                )  # 1 * C * H * W
-                block_cnt += num_blocks_last_scale
+    #     image_features_each_image = []
+    #     new_block_sizes = []
+    #     block_cnt = 0
+    #     for block_size_each_image in block_sizes:
+    #         if block_size_each_image is None:
+    #             cur_features = image_features[block_cnt : block_cnt + 1]
+    #             cur_features = rearrange(cur_features, "1 (h w) c -> 1 c h w", h=int(cur_features.shape[1] ** 0.5))
+    #             cur_features = cur_features.repeat(1, len(scales), 1, 1)
+    #             image_features_each_image.append(cur_features)
+    #             new_block_sizes.append((1, 1))
+    #             block_cnt += 1
+    #         else:
+    #             cur_features_each_scale = []
+    #             for scale in scales[:-1]:
+    #                 num_blocks_this_scale = (scale // scales[0]) ** 2
+    #                 cur_features_each_scale.append(
+    #                     self.merge_chessboard(
+    #                         image_features[block_cnt : block_cnt + num_blocks_this_scale],
+    #                         num_split_h=scale // scales[0],
+    #                         num_split_w=scale // scales[0],
+    #                     )
+    #                 )  # 1 * C * H * W
+    #                 block_cnt += num_blocks_this_scale
+    #             num_blocks_last_scale = block_size_each_image[0] * block_size_each_image[1]
+    #             cur_features_each_scale.append(
+    #                 self.merge_chessboard(
+    #                     image_features[block_cnt : block_cnt + num_blocks_last_scale],
+    #                     num_split_h=block_size_each_image[0],
+    #                     num_split_w=block_size_each_image[1],
+    #                 )
+    #             )  # 1 * C * H * W
+    #             block_cnt += num_blocks_last_scale
 
-                # resize and concat features from different scales
-                output_size = cur_features_each_scale[resize_output_to_scale_idx].shape[-2:]
-                cur_features = torch.cat(
-                    [
-                        F.interpolate(cur_features_each_scale[i].to(torch.float32), size=output_size, mode="area").to(
-                            cur_features_each_scale[i].dtype
-                        )
-                        for i in range(len(cur_features_each_scale))
-                    ],
-                    dim=1,
-                )
-                # cur_features = rearrange(cur_features, "1 c h w -> (h w) c")
+    #             # resize and concat features from different scales
+    #             output_size = cur_features_each_scale[resize_output_to_scale_idx].shape[-2:]
+    #             cur_features = torch.cat(
+    #                 [
+    #                     F.interpolate(cur_features_each_scale[i].to(torch.float32), size=output_size, mode="area").to(
+    #                         cur_features_each_scale[i].dtype
+    #                     )
+    #                     for i in range(len(cur_features_each_scale))
+    #                 ],
+    #                 dim=1,
+    #             )
+    #             # cur_features = rearrange(cur_features, "1 c h w -> (h w) c")
 
-                image_features_each_image.append(cur_features)
+    #             image_features_each_image.append(cur_features)
 
-                if resize_output_to_scale_idx == len(scales) - 1 or resize_output_to_scale_idx == -1:
-                    new_block_sizes.append(block_size_each_image)
-                else:
-                    new_block_sizes.append(
-                        (
-                            scales[resize_output_to_scale_idx] // scales[0],
-                            scales[resize_output_to_scale_idx] // scales[0],
-                        )
-                    )
+    #             if resize_output_to_scale_idx == len(scales) - 1 or resize_output_to_scale_idx == -1:
+    #                 new_block_sizes.append(block_size_each_image)
+    #             else:
+    #                 new_block_sizes.append(
+    #                     (
+    #                         scales[resize_output_to_scale_idx] // scales[0],
+    #                         scales[resize_output_to_scale_idx] // scales[0],
+    #                     )
+    #                 )
 
-        assert block_cnt == len(image_features)
+    #     assert block_cnt == len(image_features)
 
-        return image_features_each_image, new_block_sizes
+    #     return image_features_each_image, new_block_sizes
 
-    def encode_images(self, images, block_sizes: Optional[Optional[Tuple[int, ...]]] = None, is_depth: bool = False, use_depth_tower: bool = True):
+    def encode_images(self, images, block_sizes: Optional[Optional[Tuple[int, ...]]] = None, is_spatial: bool = False, enable_spatial: bool = True):
         if block_sizes is None:
             block_sizes = [None] * len(images)
-        if getattr(self.config, "dynamic_s2", False):
-            if is_depth and use_depth_tower:
-                image_features = self.get_depth_tower()(images)
-            else:
-                image_features = self.get_vision_tower()(images)
-            image_features, new_block_sizes = self.merge_features_for_dynamic_s2(image_features, block_sizes, is_depth, use_depth_tower)
+        # if getattr(self.config, "dynamic_s2", False):
+        #     if is_spatial and use_depth_tower:
+        #         image_features = self.get_depth_tower()(images)
+        #     else:
+        #         image_features = self.get_vision_tower()(images)
+        #     image_features, new_block_sizes = self.merge_features_for_dynamic_s2(image_features, block_sizes, is_spatial, use_depth_tower)
 
-            image_features = [
-                self.split_chessboard(x, block_size[0], block_size[1])
-                for x, block_size in zip(image_features, new_block_sizes)
-            ]  # list of B * C * H * W tensors
-            image_features = torch.cat(
-                [rearrange(x, "b c h w -> b (h w) c") for x in image_features], dim=0
-            )  # B * N * C
+        #     image_features = [
+        #         self.split_chessboard(x, block_size[0], block_size[1])
+        #         for x, block_size in zip(image_features, new_block_sizes)
+        #     ]  # list of B * C * H * W tensors
+        #     image_features = torch.cat(
+        #         [rearrange(x, "b c h w -> b (h w) c") for x in image_features], dim=0
+        #     )  # B * N * C
 
-            if is_depth:
-                image_features = self.get_depth_projector()(image_features)
-            else:
-                image_features = self.get_mm_projector()(image_features)
+        #     if is_spatial:
+        #         image_features = self.get_depth_projector()(image_features)
+        #     else:
+        #         image_features = self.get_mm_projector()(image_features)
 
-            image_features = list(
-                image_features.split([block_size[0] * block_size[1] for block_size in new_block_sizes], dim=0)
-            )
-            image_features = [
-                self.merge_chessboard(x, block_size[0], block_size[1])
-                for x, block_size in zip(image_features, new_block_sizes)
-            ]  # list of 1 * C * H * W tensors
-            image_features = [rearrange(x, "1 c h w -> (h w) c") for x in image_features]  # list of N * C tensors
-            if all([feature.shape[0] == image_features[0].shape[0] for feature in image_features]):
-                image_features = torch.stack(image_features, dim=0)
+        #     image_features = list(
+        #         image_features.split([block_size[0] * block_size[1] for block_size in new_block_sizes], dim=0)
+        #     )
+        #     image_features = [
+        #         self.merge_chessboard(x, block_size[0], block_size[1])
+        #         for x, block_size in zip(image_features, new_block_sizes)
+        #     ]  # list of 1 * C * H * W tensors
+        #     image_features = [rearrange(x, "1 c h w -> (h w) c") for x in image_features]  # list of N * C tensors
+        #     if all([feature.shape[0] == image_features[0].shape[0] for feature in image_features]):
+        #         image_features = torch.stack(image_features, dim=0)
+        # else:
+
+        # NOTE(Zhouenshen): images.shape: patch_num * 3 * patch_h * patch_w (14 * 3 * 448 * 448)
+        if is_spatial and enable_spatial:
+            image_features = self.get_spatial_tower()(images)
         else:
-            if is_depth and use_depth_tower:
-                image_features = self.get_depth_tower()(images)
-            else:
-                image_features = self.get_vision_tower()(images)
-            if is_depth:
-                image_features = self.get_depth_projector()(image_features)
-            else:
-                image_features = self.get_mm_projector()(image_features)
+            image_features = self.get_vision_tower()(images)    # image_features.shape: patch_num * 1024 * 1152
+
+        if is_spatial:
+            image_features = self.get_spatial_projector()(image_features)
+        else:
+            image_features = self.get_mm_projector()(image_features) # image_features.shape: patch_num * 121 * 1536
         return image_features
 
     ## @yunhao: is there a better way to handle function call and attributes for llm?
@@ -595,15 +590,15 @@ class LlavaMetaForCausalLM(ABC):
     ) -> Dict[str, List[torch.Tensor]]:
         
         embeds = defaultdict(deque)
-        use_depth_tower = hasattr(self.config, "use_depth_tower") and self.config.use_depth_tower
+        enable_spatial = hasattr(self.config, "enable_spatial") and self.config.enable_spatial
 
-        def encode(name, tensors, config, is_depth=False):
+        def encode(name, tensors, config, is_spatial=False):
             """Helper function to encode media tensors."""
-            if is_depth and not use_depth_tower:
+            if is_spatial and not enable_spatial:
                 encoder_name = "image"
             else:
                 encoder_name = name
-            return self.encoders[encoder_name](tensors, config, is_depth=is_depth, use_depth_tower=use_depth_tower)
+            return self.encoders[encoder_name](tensors, config, is_spatial=is_spatial, enable_spatial=enable_spatial)
         
         for name, tensors in media.items():
             # Preprocess media config
@@ -622,11 +617,11 @@ class LlavaMetaForCausalLM(ABC):
                 # Create a dummy tensor if the current rank has no media of this type
                 if not tensors:
                     dummy = torch.zeros(infos[0]["shape"], dtype=infos[0]["dtype"], device=self.device)
-                    embeds["dummy"].extend(encode(name, [dummy], config, is_depth=(name == "depth")))
+                    embeds["dummy"].extend(encode(name, [dummy], config, is_spatial=(name == 'spatial')))
                     continue
 
             # Encode actual media tensors
-            embeds[name] = deque(encode(name, tensors, config, is_depth=(name == "depth")))
+            embeds[name] = deque(encode(name, tensors, config, is_spatial=(name == 'spatial')))
 
         return embeds
 
@@ -950,6 +945,8 @@ class LlavaMetaForCausalLM(ABC):
         return self.llm.generate(inputs_embeds=inputs_embeds, attention_mask=attention_mask, **generation_kwargs)
 
     @torch.inference_mode()
+
+    # TODO(Zhouenshen): Support spatial generating
     def generate_content(
         self,
         prompt: Union[str, List],
@@ -977,7 +974,7 @@ class LlavaMetaForCausalLM(ABC):
                 conv["value"] = process_rgbd_inference_conversation(conv["value"])
         
         for name in media:
-            if name in ["image", "depth"]:
+            if name in ["image", "spatial"]:
                 # if len(media["image"]) == 1 and self.config.image_aspect_ratio in ["dynamic", "dynamic_s2"]:
                 #     self.config.image_processor = self.vision_tower.image_processor
                 #     if self.config.image_aspect_ratio == "dynamic":
@@ -998,36 +995,37 @@ class LlavaMetaForCausalLM(ABC):
                 # media[name] = [image for image in images]
 
                 # NOTE(Zhouenshen): process depth and image separately
-                if self.config.image_aspect_ratio == "dynamic_s2":
-                    if name == "depth" and hasattr(self.config, "use_depth_tower") and self.config.use_depth_tower:
-                        self.config.image_processor = self.depth_tower.image_processor
-                    else:
-                        self.config.image_processor = self.vision_tower.image_processor
+                # if self.config.image_aspect_ratio == "dynamic_s2":
+                #     if name == "depth" and hasattr(self.config, "use_depth_tower") and self.config.use_depth_tower:
+                #         self.config.image_processor = self.depth_tower.image_processor
+                #     else:
+                #         self.config.image_processor = self.vision_tower.image_processor
 
-                    if type(self.config.s2_scales) is str:
-                        self.config.s2_scales = list(map(int, self.config.s2_scales.split(",")))
-                    if name == "image":
-                        images, block_sizes = dynamic_s2_process_images_and_prompt(images=media["image"], prompt=None, data_args=self.config, image_folder=None)
-                    else:
-                        images, block_sizes = dynamic_s2_process_depths_and_prompt(depths=media["depth"], prompt=None, data_args=self.config, depth_folder=None)
-                    images = images.half()
-                    media_config[name]["block_sizes"] = block_sizes
+                #     if type(self.config.s2_scales) is str:
+                #         self.config.s2_scales = list(map(int, self.config.s2_scales.split(",")))
+                #     if name == "image":
+                #         images, block_sizes = dynamic_s2_process_images_and_prompt(images=media["image"], prompt=None, data_args=self.config, image_folder=None)
+                #     else:
+                #         images, block_sizes = dynamic_s2_process_depths_and_prompt(depths=media["depth"], prompt=None, data_args=self.config, depth_folder=None)
+                #     images = images.half()
+                #     media_config[name]["block_sizes"] = block_sizes
                 
-                elif self.config.image_aspect_ratio == "dynamic":
-                    if name == "depth" and hasattr(self.config, "use_depth_tower") and self.config.use_depth_tower:
-                        self.config.image_processor = self.depth_tower.image_processor
-                    else:
-                        self.config.image_processor = self.vision_tower.image_processor
+                if self.config.image_aspect_ratio == "dynamic":
+                    # if name == "depth" and hasattr(self.config, "use_depth_tower") and self.config.use_depth_tower:
+                    #     self.config.image_processor = self.depth_tower.image_processor
+                    # else:
+                    #     self.config.image_processor = self.vision_tower.image_processor
+                    self.config.image_processor = self.vision_tower.image_processor
                     if name == "image":
                         images, conversation[0]["value"] = dynamic_process_images_and_prompt(images=media["image"], prompt=conversation[0]["value"], data_args=self.config, image_folder=None)
                     else:
-                        images, conversation[0]["value"] = dynamic_process_depths_and_prompt(depths=media["depth"], prompt=conversation[0]["value"], data_args=self.config, depth_folder=None)
+                        images, conversation[0]["value"] = dynamic_process_images_and_prompt_for_spatial_encoder(images=media["spatial"], prompt=conversation[0]["value"], data_args=self.config, image_folder=None)
                     images = images.half()
-                else:
-                    if name == "image":
-                        images = torch.stack([process_image(image_file=img, data_args= self.config, image_folder=None) for img in media["image"]]).half()
-                    else:
-                        images = torch.stack([process_depth(depth_file=img, data_args= self.config, depth_folder=None) for img in media["depth"]]).half()
+                # else:
+                #     if name == "image":
+                #         images = torch.stack([process_image(image_file=img, data_args= self.config, image_folder=None) for img in media["image"]]).half()
+                #     else:
+                #         images = torch.stack([process_depth(depth_file=img, data_args= self.config, depth_folder=None) for img in media["depth"]]).half()
                 media[name] = [image for image in images]
             elif name == "video":
                 media[name] = [

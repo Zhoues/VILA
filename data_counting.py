@@ -1,23 +1,23 @@
 import json
 
 data_path_list = [
-    "/home_sfs/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_choice_qa.json",
-    # "/home_sfs/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_qa.json",
-    # "/home_sfs/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_template_qa.json",
-    "/home_sfs/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_template_qa.json",
-    # "/home_sfs/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_template_qa_split.json",
-    "/home_sfs/zhouenshen/dataset/3D/cubifyanything/ca1m_reasoning_template_qa_split.json",
-    "/home_sfs/zhouenshen/dataset/3D/cubifyanything/ca1m_choice_qa_split.json",
-    "/home_sfs/zhouenshen/dataset/3D/cubifyanything/ca1m_visual_choice_qa.json",
-    "/home_sfs/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa.json",
+    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_choice_qa.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_qa.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_template_qa.json",
+    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_template_qa.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_template_qa_split.json",
+    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_reasoning_template_qa_split.json",
+    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_choice_qa_split.json",
+    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_visual_choice_qa.json",
+    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa.json",
 
-    "/home_sfs/zhouenshen/dataset/Simulator/metadata_split_10.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/metadata_split_10.json",
 
-    "/home_sfs/zhouenshen/dataset/Detection/refcoco/metadata.json",
-    "/home_sfs/zhouenshen/dataset/Detection/refcocop/metadata.json",
-    "/home_sfs/zhouenshen/dataset/Detection/refcocog/metadata.json",
-    "/home_sfs/zhouenshen/dataset/vlm/SAT/metadata.json",
-    # "/home_sfs/zhouenshen/dataset/vlm/Pixmo/pixmo_0_10_points_w_counting.json",
+    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcoco/metadata.json",
+    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocop/metadata.json",
+    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocog/metadata.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/metadata.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/Pixmo/pixmo_0_10_points_w_counting.json",
 ]
 
 # 全局统计变量

@@ -29,21 +29,29 @@ class LlavaConfig(PretrainedConfig):
         vision_tower_cfg=None,
         mm_projector_cfg=None,
 
-        # NOTE(Zhouenshen): Add depth tower and projector configuration in llava config and whether to use depth tower to process the depth image
-        enable_depth=None,
-        depth_tower_cfg=None,
-        depth_projector_cfg=None,
-        use_depth_tower=None,
+        # NOTE(Zhouenshen): Add spatial tower and projector configuration in llava config and whether to use spatial tower to process the image
+        enable_spatial=None,
+        spatial_tower_cfg=None,
+        spatial_projector_cfg=None,
 
         architectures=None,
         resume_path=None,
         hidden_size=None,
         mm_hidden_size=None,
+
+        # NOTE(Zhouenshen): Add spatial hidden size in llava config
+        spatial_hidden_size=None,
+
         image_aspect_ratio=None,
         num_video_frames=None,
         fps=None,
         mm_vision_select_layer=None,
         mm_vision_select_feature=None,
+
+        # NOTE(Zhouenshen): Add spatial tower vision select feature in llava config
+        spatial_tower_vision_select_feature=None,
+        spatial_tower_vision_num_tokens=None,
+        
         mm_use_im_start_end=False,
         mm_use_im_patch_token=False,
         mm_projector_lr=None,
@@ -62,8 +70,8 @@ class LlavaConfig(PretrainedConfig):
         image_encoder: str = '{"_target_": "llava.model.encoders.BasicImageEncoder"}',
         video_encoder: str = '{"_target_": "llava.model.encoders.BasicVideoEncoder"}',
 
-        # NOTE(Zhouenshen): Add depth encoder configuration in llava config
-        depth_encoder: str = '{"_target_": "llava.model.encoders.BasicImageEncoder"}',
+        # NOTE(Zhouenshen): Add spatial encoder configuration in llava config
+        spatial_encoder: str = '{"_target_": "llava.model.encoders.BasicImageEncoder"}',
         **kwargs,
     ):
         super().__init__()
@@ -74,18 +82,24 @@ class LlavaConfig(PretrainedConfig):
         self.resume_path = resume_path
 
         # NOTE(Zhouenshen): Add depth configuration in llava config
-        self.enable_depth = enable_depth
-        self.depth_tower_cfg = depth_tower_cfg
-        self.depth_projector_cfg = depth_projector_cfg
-        self.use_depth_tower = use_depth_tower
+        self.enable_spatial = enable_spatial
+        self.spatial_tower_cfg = spatial_tower_cfg
+        self.spatial_projector_cfg = spatial_projector_cfg
 
         self.hidden_size = hidden_size
         self.mm_hidden_size = mm_hidden_size
+        # NOTE(Zhouenshen): Add spatial hidden size in llava config
+        self.spatial_hidden_size = spatial_hidden_size
         self.image_aspect_ratio = image_aspect_ratio
         self.num_video_frames = num_video_frames
         self.fps = fps
         self.mm_vision_select_layer = mm_vision_select_layer
         self.mm_vision_select_feature = mm_vision_select_feature
+
+        # NOTE(Zhouenshen): Add spatial tower vision select feature in llava config
+        self.spatial_tower_vision_select_feature = spatial_tower_vision_select_feature
+        self.spatial_tower_vision_num_tokens = spatial_tower_vision_num_tokens
+        
         self.mm_use_im_start_end = mm_use_im_start_end
         self.mm_use_im_patch_token = mm_use_im_patch_token
         self.mm_projector_lr = mm_projector_lr
@@ -105,8 +119,8 @@ class LlavaConfig(PretrainedConfig):
         self.image_encoder = image_encoder
         self.video_encoder = video_encoder
 
-        # NOTE(Zhouenshen): Add depth encoder in llava config
-        self.depth_encoder = depth_encoder
+        # NOTE(Zhouenshen): Add spatial encoder in llava config
+        self.spatial_encoder = spatial_encoder
 
 
 

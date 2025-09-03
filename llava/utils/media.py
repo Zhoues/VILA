@@ -11,7 +11,7 @@ import requests
 from transformers import PretrainedConfig
 
 from llava.constants import MEDIA_TOKENS
-from llava.media import Depth, Image, Video
+from llava.media import Spatial, Image, Video
 from llava.utils import make_list
 from llava.utils.logging import logger
 
@@ -20,7 +20,7 @@ __all__ = ["extract_media"]
 
 def _extract_image(image: Union[Image, PIL.Image.Image]) -> PIL.Image.Image:
     # NOTE(Zhouenshen): Support depth input
-    if isinstance(image, (Image, Depth)):
+    if isinstance(image, (Image, Spatial)):
         if image.path.startswith("http://") or image.path.startswith("https://"):
             image = PIL.Image.open(requests.get(image.path, stream=True).raw)
         else:
@@ -100,13 +100,13 @@ def extract_media(
                 else:
                     media["video"].append(_extract_video(part, config))
                 text += MEDIA_TOKENS["video"]
-            # NOTE(Zhouenshen): Support depth input
-            elif isinstance(part, (Depth, PIL.Image.Image)):
+            # NOTE(Zhouenshen): Support spatial input
+            elif isinstance(part, (Spatial, PIL.Image.Image)):
                 if draft:
-                    media["depth"].append(part)
+                    media["spatial"].append(part)
                 else:
-                    media["depth"].append(_extract_image(part))
-                text += MEDIA_TOKENS["depth"]
+                    media["spatial"].append(_extract_image(part))
+                text += MEDIA_TOKENS["spatial"]
             else:
                 raise ValueError(f"Unsupported prompt part type: {type(part)}")
         message["value"] = text

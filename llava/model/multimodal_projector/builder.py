@@ -30,8 +30,21 @@ def build_mm_projector(model_type_or_path: str, config: PretrainedConfig) -> Pre
 
     ## load from pretrained model
     if config.resume_path:
-        assert os.path.exists(model_type_or_path), f"Resume mm projector path {model_type_or_path} does not exist!"
-        return MultimodalProjector.from_pretrained(model_type_or_path, config, torch_dtype=eval(config.model_dtype))
+        if os.path.exists(model_type_or_path) and (os.path.exists(os.path.join(model_type_or_path, "model.pt")) or os.path.exists(os.path.join(model_type_or_path, "model.safetensors"))):
+            return MultimodalProjector.from_pretrained(model_type_or_path, config, torch_dtype=eval(config.model_dtype))
+        else:
+            # assert os.path.exists(model_type_or_path), f"Resume mm projector path {model_type_or_path} does not exist!"
+            print(f"Resume mm projector path {model_type_or_path} does not exist!")
+            print(f"Building mm projector from scratch!")
+
+            # NOTE(Zhouenshen): Build spatial projector from scratch for MoGe2
+            spatial_projector_type = config.spatial_projector_cfg.get("mm_projector_type", "mlp_downsample_3x3_fix")
+            spatial_projector_use_cls_token = config.spatial_projector_cfg.get("spatial_tower_vision_select_feature", "cls_patch")
+            spatial_projector_num_tokens = config.spatial_projector_cfg.get("spatial_tower_vision_num_tokens", 3600)
+            
+            spatial_projector_cfg = MultimodalProjectorConfig(spatial_projector_type, spatial_tower_vision_select_feature=spatial_projector_use_cls_token, spatial_tower_vision_num_tokens=spatial_projector_num_tokens)
+            return MultimodalProjector(spatial_projector_cfg, config).to(eval(config.model_dtype))
+
     ## build from scratch
     else:
         mm_projector_cfg = MultimodalProjectorConfig(model_type_or_path)

@@ -11,7 +11,7 @@
 *.log
 
 ckpt/
-wandb/
+llava/model/multimodal_encoder/MoGe/*
 data_prepare/*
 
 *.png
@@ -21,3 +21,8 @@ data_prepare/*
 *.tiff
 *.webp
 *.heic
+
+*.jpg
+*.ipynb
+*.json
+*.sh

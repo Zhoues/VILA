@@ -162,7 +162,8 @@ def build_dataset_legacy(
         LazySupervisedDataset,
         LazyVideoWebDataset,
         LazyWDSDataset,
-        LazySupervisedSpatialDataset
+        LazySupervisedSpatialDataset,
+        LazySupervisedGeometricDataset
     )
     from llava.data.dataset_impl.coyo_recap import LazyCoyoWebRecapDataset
     from llava.data.dataset_impl.panda70m import VILAPanda70m
@@ -201,12 +202,18 @@ def build_dataset_legacy(
     # NOTE(Zhouenshen): Add the RGBD dataset class
     elif dataset_type == "spatialdataset":
         dataset_cls = LazySupervisedSpatialDataset
+    elif dataset_type == "geometricdataset":
+        dataset_cls = LazySupervisedGeometricDataset
     else:
         raise NotImplementedError(f"{dataset_type} is not supported.")
 
     data_args.meta_path = getattr(dataset, "meta_path", None)
     # NOTE(Zhouenshen): Add the depth path for spatialdataset
     data_args.depth_path = getattr(dataset, "depth_path", None)
+
+    # NOTE(Zhouenshen): Add the spatial path for spatialdataset
+    data_args.enable_spatial = getattr(dataset, "enable_spatial", False)
+
     data_args.caption_choice = getattr(dataset, "caption_choice", None)
     data_args.caption_choice_2 = getattr(dataset, "caption_choice_2", None)
     data_args.start_idx = getattr(dataset, "start_idx", None)

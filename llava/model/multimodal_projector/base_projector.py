@@ -125,9 +125,27 @@ def flat_square_3x3(x):
 class MultimodalProjectorConfig(PretrainedConfig):
     model_type = "v2l_projector"
 
-    def __init__(self, mm_projector_type: str = None, **kwargs):
+    def __init__(self, mm_projector_type: str = None, spatial_tower_vision_select_feature: str = None, spatial_tower_vision_num_tokens: int = -1, **kwargs):
         super().__init__()
         self.mm_projector_type = mm_projector_type
+        self.spatial_tower_vision_select_feature = spatial_tower_vision_select_feature
+        self.spatial_tower_vision_num_tokens = spatial_tower_vision_num_tokens
+
+
+class LearnableTokenReducer(nn.Module):
+    def __init__(self, token_num_out, token_dim, token_num=None):
+        super().__init__()
+        self.token_num_out = token_num_out
+        self.token_num = token_num or (token_num_out + 1)
+        self.token_dim = token_dim
+        self.pool_proj = nn.Linear(self.token_num, self.token_num_out)
+
+    def forward(self, x):
+        # x: (B, token_num, token_dim)
+        x = x.transpose(1, 2)  # (B, token_dim, token_num)
+        x = self.pool_proj(x)  # (B, token_dim, token_num_out)
+        x = x.transpose(1, 2)  # (B, token_num_out, token_dim)
+        return x
 
 
 class MultimodalProjector(PreTrainedModel):
@@ -160,17 +178,32 @@ class MultimodalProjector(PreTrainedModel):
             )
             self.downsample_rate = 2
         elif mm_projector_type == "mlp_downsample_3x3_fix":
-            self.layers = nn.Sequential(
+            self.layers = nn.Sequential()
+
+            # NOTE(Zhouenshen): When spatial_tower_vision_select_feature is "cls_patch", we need to reduce the hidden size (3601 or 1025) by 1
+            if mm_projector_cfg.spatial_tower_vision_select_feature is not None and mm_projector_cfg.spatial_tower_vision_select_feature == "cls_patch":
+                assert mm_projector_cfg.spatial_tower_vision_num_tokens != -1, "spatial_tower_vision_num_tokens must be set when spatial_tower_vision_select_feature is 'cls_patch'"
+                
+                self.layers.append(LearnableTokenReducer(token_num_out=mm_projector_cfg.spatial_tower_vision_num_tokens, token_dim=config.mm_hidden_size))
+            
+            # NOTE(Zhouenshen): We use spatial_tower_vision_num_tokens and spatial_tower_vision_num_tokens to determine the hidden size of the projector
+            if mm_projector_cfg.spatial_tower_vision_num_tokens is None or mm_projector_cfg.spatial_tower_vision_num_tokens == -1:
+                mlp_hidden_size = config.mm_hidden_size
+            else:
+                mlp_hidden_size = config.spatial_hidden_size
+
+            self.layers.extend([
                 DownSample3x3BlockFix(),
-                nn.LayerNorm(config.mm_hidden_size * 9),
-                nn.Linear(config.mm_hidden_size * 9, config.mm_hidden_size * 3),
+                nn.LayerNorm(mlp_hidden_size * 9),
+                nn.Linear(mlp_hidden_size * 9, mlp_hidden_size * 3),
                 nn.GELU(),
-                nn.LayerNorm(config.mm_hidden_size * 3),
-                nn.Linear(config.mm_hidden_size * 3, config.hidden_size),
+                nn.LayerNorm(mlp_hidden_size * 3),
+                nn.Linear(mlp_hidden_size * 3, config.hidden_size),
                 nn.GELU(),
                 nn.Linear(config.hidden_size, config.hidden_size),
-            )
+            ])
             self.downsample_rate = 3
+
         elif mm_projector_type == "mlp_downsample_3x3_s2":
             self.layers = nn.Sequential(
                 DownSample3x3BlockFix(),

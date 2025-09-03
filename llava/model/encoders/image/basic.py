@@ -38,9 +38,9 @@ class BasicImageEncoder(BaseEncoder):
             features = torch.cat([features, end_token_embeds], dim=0)
         return features
 
-    def forward(self, images: List[torch.Tensor], config: Dict[str, Any], is_depth: bool = False, use_depth_tower: bool = True) -> List[torch.Tensor]:
+    def forward(self, images: List[torch.Tensor], config: Dict[str, Any], is_spatial: bool = False, enable_spatial: bool = True) -> List[torch.Tensor]:
         images = torch.stack(images, dim=0)
-        features = self.parent.encode_images(images, block_sizes=config.get("block_sizes"), is_depth=is_depth, use_depth_tower=use_depth_tower)
+        features = self.parent.encode_images(images, block_sizes=config.get("block_sizes"), is_spatial=is_spatial, enable_spatial=enable_spatial)
         process_features = partial(
             self._process_features,
             start_token_embeds=self.embed_tokens(self.start_tokens),
