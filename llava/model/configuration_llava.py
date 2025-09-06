@@ -33,6 +33,7 @@ class LlavaConfig(PretrainedConfig):
         enable_spatial=None,
         spatial_tower_cfg=None,
         spatial_projector_cfg=None,
+        metric_scale_factor_projector_cfg=None,
 
         architectures=None,
         resume_path=None,
@@ -85,6 +86,7 @@ class LlavaConfig(PretrainedConfig):
         self.enable_spatial = enable_spatial
         self.spatial_tower_cfg = spatial_tower_cfg
         self.spatial_projector_cfg = spatial_projector_cfg
+        self.metric_scale_factor_projector_cfg = metric_scale_factor_projector_cfg
 
         self.hidden_size = hidden_size
         self.mm_hidden_size = mm_hidden_size

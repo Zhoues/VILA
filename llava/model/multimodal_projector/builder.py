@@ -16,6 +16,7 @@
 
 # This file is modified from https://github.com/haotian-liu/LLaVA/
 
+from hmac import new
 import os
 
 import torch
@@ -37,13 +38,21 @@ def build_mm_projector(model_type_or_path: str, config: PretrainedConfig) -> Pre
             print(f"Resume mm projector path {model_type_or_path} does not exist!")
             print(f"Building mm projector from scratch!")
 
-            # NOTE(Zhouenshen): Build spatial projector from scratch for MoGe2
-            spatial_projector_type = config.spatial_projector_cfg.get("mm_projector_type", "mlp_downsample_3x3_fix")
-            spatial_projector_use_cls_token = config.spatial_projector_cfg.get("spatial_tower_vision_select_feature", "cls_patch")
-            spatial_projector_num_tokens = config.spatial_projector_cfg.get("spatial_tower_vision_num_tokens", 3600)
+            if "metric_scale_factor_projector" in model_type_or_path:
+                # NOTE(Zhouenshen): Build metric scale factor projector 
+                new_projector_type = config.metric_scale_factor_projector_cfg.get("mm_projector_type", "mlp_downsample_3x3_fix")
+                new_projector_use_cls_token = config.metric_scale_factor_projector_cfg.get("spatial_tower_vision_select_feature", None)
+                new_projector_num_tokens = config.metric_scale_factor_projector_cfg.get("spatial_tower_vision_num_tokens", -1)
+            elif "spatial_projector" in model_type_or_path:
+                # NOTE(Zhouenshen): Build spatial projector from scratch for MoGe2
+                new_projector_type = config.spatial_projector_cfg.get("mm_projector_type", "mlp_downsample_3x3_fix")
+                new_projector_use_cls_token = config.spatial_projector_cfg.get("spatial_tower_vision_select_feature", "cls_patch")
+                new_projector_num_tokens = config.spatial_projector_cfg.get("spatial_tower_vision_num_tokens", 3600)
+            else:
+                raise ValueError(f"Unknown projector: {model_type_or_path}")
             
-            spatial_projector_cfg = MultimodalProjectorConfig(spatial_projector_type, spatial_tower_vision_select_feature=spatial_projector_use_cls_token, spatial_tower_vision_num_tokens=spatial_projector_num_tokens)
-            return MultimodalProjector(spatial_projector_cfg, config).to(eval(config.model_dtype))
+            new_projector_cfg = MultimodalProjectorConfig(new_projector_type, spatial_tower_vision_select_feature=new_projector_use_cls_token, spatial_tower_vision_num_tokens=new_projector_num_tokens)
+            return MultimodalProjector(new_projector_cfg, config).to(eval(config.model_dtype))
 
     ## build from scratch
     else:

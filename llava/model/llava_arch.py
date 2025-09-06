@@ -48,7 +48,7 @@ from llava.utils.tokenizer import tokenize_conversation
 class LlavaMetaModel(ABC):
     def init_vlm(self, config, *args, **kwargs):
         # TODO(ligeng): figure out how from_config and from_pretrained works in HF implementation.
-        if hasattr(self, "llm") or hasattr(self, "vision_tower") or hasattr(self, "mm_projector") or hasattr(self, "spatial_tower") or hasattr(self, "spatial_projector"):
+        if hasattr(self, "llm") or hasattr(self, "vision_tower") or hasattr(self, "mm_projector") or hasattr(self, "spatial_tower") or hasattr(self, "spatial_projector") or hasattr(self, "metric_scale_factor_projector"):
             # already initialized, skipped
             return
 
@@ -58,16 +58,21 @@ class LlavaMetaModel(ABC):
             config.model_dtype = model_dtype
 
         cfgs = get_model_config(config)
-        if len(cfgs) == 5:
+
+        # NOTE(Zhouenshen): Add metric scale factor projector configuration
+        if len(cfgs) == 6:
+            llm_cfg, vision_tower_cfg, mm_projector_cfg, spatial_tower_cfg, spatial_projector_cfg, metric_scale_factor_projector_cfg = cfgs
+        elif len(cfgs) == 5:
             llm_cfg, vision_tower_cfg, mm_projector_cfg, spatial_tower_cfg, spatial_projector_cfg = cfgs
+            metric_scale_factor_projector_cfg = None
         elif len(cfgs) == 4:
             llm_cfg, vision_tower_cfg, mm_projector_cfg, spatial_projector_cfg = cfgs
-            spatial_tower_cfg = None
+            spatial_tower_cfg, metric_scale_factor_projector_cfg = None, None
         elif len(cfgs) == 3:
             llm_cfg, vision_tower_cfg, mm_projector_cfg = cfgs
-            spatial_tower_cfg, spatial_projector_cfg = None, None
+            spatial_tower_cfg, spatial_projector_cfg, metric_scale_factor_projector_cfg = None, None, None
         else:
-            raise ValueError("`llm_cfg` `mm_projector_cfg` `vision_tower_cfg` `spatial_tower_cfg` `spatial_projector_cfg` not found in the config.")
+            raise ValueError("`llm_cfg` `mm_projector_cfg` `vision_tower_cfg` `spatial_tower_cfg` `spatial_projector_cfg` `metric_scale_factor_projector_cfg` not found in the config.")
 
         # print("Before init in Config")
         # if hasattr(config, "deepspeed") and "mics" in config.deepspeed:
@@ -78,7 +83,7 @@ class LlavaMetaModel(ABC):
         #         self.vision_tower = build_vision_tower(vision_tower_cfg, config)
         #         self.mm_projector = build_mm_projector(mm_projector_cfg, config)
         # else:
-        # NOTE(Zhouenshen): build all components of VLM, including LLM, Vision Tower, and MM Projector
+        # NOTE(Zhouenshen): build all components of VLM, including LLM, Vision Tower, MM Projector, Spatial Tower, Spatial Projector, and Metric Scale Factor Projector
         self.llm, self.tokenizer = build_llm_and_tokenizer(llm_cfg, config, *args, **kwargs)
         self.vision_tower = build_vision_tower(vision_tower_cfg, config)
         self.mm_projector = build_mm_projector(mm_projector_cfg, config)
@@ -90,11 +95,14 @@ class LlavaMetaModel(ABC):
 
         # NOTE(Zhouenshen): Load spatial tower and projector ckpt if provided
         if hasattr(config, "enable_spatial") and config.enable_spatial:
+            # NOTE(Zhouenshen): Build spatial tower before building spatial projector and metric scale factor projector to update the config
             self.spatial_tower = build_spatial_tower(spatial_tower_cfg, config)
             self.spatial_projector = build_mm_projector(spatial_projector_cfg, config)
+            self.metric_scale_factor_projector = build_mm_projector(metric_scale_factor_projector_cfg, config)
         else:
             self.spatial_tower = None
             self.spatial_projector = None
+            self.metric_scale_factor_projector = None
 
 
         # NOTE(Zhouenshen): tune_spatial_tower must be set True if enable_spatial is True
@@ -113,7 +121,7 @@ class LlavaMetaModel(ABC):
         self.is_loaded = True
 
         assert (
-            self.llm is not None or self.vision_tower is not None or self.mm_projector is not None or self.spatial_tower is not None or self.spatial_projector is not None
+            self.llm is not None or self.vision_tower is not None or self.mm_projector is not None or self.spatial_tower is not None or self.spatial_projector is not None or self.metric_scale_factor_projector is not None
         ), "At least one of the components must be instantiated."
 
     @classmethod
@@ -141,16 +149,20 @@ class LlavaMetaModel(ABC):
             config.model_dtype = model_dtype
 
         cfgs = get_model_config(config)
-        if len(cfgs) == 5:
+        # NOTE(Zhouenshen): Add metric scale factor projector configuration
+        if len(cfgs) == 6:
+            llm_cfg, vision_tower_cfg, mm_projector_cfg, spatial_tower_cfg, spatial_projector_cfg, metric_scale_factor_projector_cfg = cfgs
+        elif len(cfgs) == 5:
             llm_cfg, vision_tower_cfg, mm_projector_cfg, spatial_tower_cfg, spatial_projector_cfg = cfgs
+            metric_scale_factor_projector_cfg = None
         elif len(cfgs) == 4:
             llm_cfg, vision_tower_cfg, mm_projector_cfg, spatial_projector_cfg = cfgs
-            spatial_tower_cfg = None
+            spatial_tower_cfg, metric_scale_factor_projector_cfg = None, None
         elif len(cfgs) == 3:
             llm_cfg, vision_tower_cfg, mm_projector_cfg = cfgs
-            spatial_tower_cfg, spatial_projector_cfg = None, None
+            spatial_tower_cfg, spatial_projector_cfg, metric_scale_factor_projector_cfg = None, None, None
         else:
-            raise ValueError("`llm_cfg` `mm_projector_cfg` `vision_tower_cfg` `spatial_tower_cfg` `spatial_projector_cfg` not found in the config.")
+            raise ValueError("`llm_cfg` `mm_projector_cfg` `vision_tower_cfg` `spatial_tower_cfg` `spatial_projector_cfg` `metric_scale_factor_projector_cfg` not found in the config.")
 
         # print(llm_cfg, vision_tower_cfg, mm_projector_cfg); input("DEBUG load_pretrained")
         init_context = [
@@ -165,7 +177,7 @@ class LlavaMetaModel(ABC):
             vlm = cls(config, *args, **kwargs)
         # print(llm_cfg, vision_tower_cfg, mm_projector_cfg); input("DEBUG load_pretrained finish")
 
-        if hasattr(vlm, "llm") or hasattr(vlm, "vision_tower") or hasattr(vlm, "mm_projector") or hasattr(vlm, "spatial_tower") or hasattr(vlm, "spatial_projector"):
+        if hasattr(vlm, "llm") or hasattr(vlm, "vision_tower") or hasattr(vlm, "mm_projector") or hasattr(vlm, "spatial_tower") or hasattr(vlm, "spatial_projector") or hasattr(vlm, "metric_scale_factor_projector"):
             if vlm.is_loaded:
                 return vlm
 
@@ -175,18 +187,21 @@ class LlavaMetaModel(ABC):
 
         # NOTE(Zhouenshen): Add spatial tower and projector
         if hasattr(config, "enable_spatial") and config.enable_spatial:
-            vlm.spatial_projector = build_mm_projector(spatial_projector_cfg, config)
+            # NOTE(Zhouenshen): Build spatial tower before building spatial projector and metric scale factor projector to update the config
             vlm.spatial_tower = build_spatial_tower(spatial_tower_cfg, config)
+            vlm.spatial_projector = build_mm_projector(spatial_projector_cfg, config)
+            vlm.metric_scale_factor_projector = build_mm_projector(metric_scale_factor_projector_cfg, config)
         else:
             vlm.spatial_tower = None
             vlm.spatial_projector = None
+            vlm.metric_scale_factor_projector = None
 
         self.post_config()
         self.is_loaded = True
 
         # FIXME(ligeng, yunhao): llm should never be none here.
         assert (
-            vlm.llm is not None or vlm.vision_tower is not None or vlm.mm_projector is not None or vlm.spatial_tower is not None or vlm.spatial_projector is not None
+            vlm.llm is not None or vlm.vision_tower is not None or vlm.mm_projector is not None or vlm.spatial_tower is not None or vlm.spatial_projector is not None or vlm.metric_scale_factor_projector is not None
         ), "At least one of the components must be instantiated."
         return vlm
 
@@ -247,6 +262,18 @@ class LlavaMetaModel(ABC):
                 state_dict=spatial_projector_state_dict,
             )
             self.config.spatial_projector_cfg = self.spatial_projector.config
+
+        if self.get_metric_scale_factor_projector():
+            print(f"saving metric_scale_factor_projector to {osp.join(output_dir, 'metric_scale_factor_projector')}")
+            self.metric_scale_factor_projector.config._name_or_path = osp.join(output_dir, "metric_scale_factor_projector")
+            metric_scale_factor_projector_state_dict = OrderedDict(
+                {k.split("metric_scale_factor_projector.")[-1]: v for k, v in state_dict.items() if "metric_scale_factor_projector" in k}
+            )
+            self.metric_scale_factor_projector.save_pretrained(
+                os.path.join(output_dir, "metric_scale_factor_projector"),
+                state_dict=metric_scale_factor_projector_state_dict,
+            )
+            self.config.metric_scale_factor_projector_cfg = self.metric_scale_factor_projector.config
 
         if self.get_spatial_tower():
             print(f"saving spatial_tower to {osp.join(output_dir, 'spatial_tower')}")
@@ -310,6 +337,12 @@ class LlavaMetaModel(ABC):
             spatial_projector = spatial_projector[0]
         return spatial_projector
 
+    def get_metric_scale_factor_projector(self):
+        metric_scale_factor_projector = getattr(self, "metric_scale_factor_projector", None)
+        if type(metric_scale_factor_projector) is list:
+            metric_scale_factor_projector = metric_scale_factor_projector[0]
+        return metric_scale_factor_projector
+
     def post_config(self):
         self.training = self.get_llm().training
         ## configuration
@@ -323,6 +356,8 @@ class LlavaMetaModel(ABC):
             self.config.spatial_tower_cfg = self.spatial_tower.config
         if getattr(self.config, "spatial_projector_cfg", None) is None and self.spatial_projector is not None:
             self.config.spatial_projector_cfg = self.spatial_projector.config
+        if getattr(self.config, "metric_scale_factor_projector_cfg", None) is None and self.metric_scale_factor_projector is not None:
+            self.config.metric_scale_factor_projector_cfg = self.metric_scale_factor_projector.config
 
     def freezed_module_patch(self):
         """
@@ -342,6 +377,8 @@ class LlavaMetaModel(ABC):
                 self.get_spatial_tower().eval()
             if self.get_spatial_projector() and not getattr(self.config, "tune_spatial_projector", False):
                 self.get_spatial_projector().eval()
+            if self.get_metric_scale_factor_projector() and not getattr(self.config, "tune_metric_scale_factor_projector", False):
+                self.get_metric_scale_factor_projector().eval()
 
     @staticmethod
     def merge_chessboard(x, num_split_h, num_split_w):

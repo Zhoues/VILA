@@ -662,9 +662,12 @@ def train():
         if model.get_spatial_projector():
             model.get_spatial_projector().requires_grad_(training_args.tune_spatial_projector)
             mprint(f"spatial projector {training_args.tune_spatial_projector}")
+        if model.get_metric_scale_factor_projector():
+            model.get_metric_scale_factor_projector().requires_grad_(training_args.tune_metric_scale_factor_projector)
+            mprint(f"metric scale factor projector {training_args.tune_metric_scale_factor_projector}")
 
         if not any(
-            [training_args.tune_language_model, training_args.tune_vision_tower, training_args.tune_mm_projector, training_args.tune_spatial_tower, training_args.tune_spatial_projector]
+            [training_args.tune_language_model, training_args.tune_vision_tower, training_args.tune_mm_projector, training_args.tune_spatial_tower, training_args.tune_spatial_projector, training_args.tune_metric_scale_factor_projector]
         ):
             logging.warning("You are not tuning any part of the model. Please check if this is intended.")
         else:
@@ -729,7 +732,7 @@ def train():
         model.resize_token_embeddings(len(tokenizer))
 
         # NOTE(Zhouenshen): fintune llm input embedding
-        if num_new_tokens > 0 and training_args.tune_spatial_projector:
+        if num_new_tokens > 0 and (training_args.tune_spatial_projector or training_args.tune_metric_scale_factor_projector):
             mprint(f"Add Depth (Spatial) token id: {tokenizer.media_token_ids['spatial']}")
             # embedding_layer = model.get_input_embeddings()  # Embedding layer, shape: [vocab_size, embedding_dim]
             # embedding_weight = embedding_layer.weight  # parameter: shape [vocab_size, hidden_size]

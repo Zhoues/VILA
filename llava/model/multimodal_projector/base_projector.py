@@ -242,13 +242,17 @@ class MultimodalProjector(PreTrainedModel):
                 nn.Linear(config.hidden_size, config.hidden_size),
             )
         else:
+            # NOTE(Zhouenshen): Build mlp projector from scratch for Metric Scale Factor
             mlp_gelu_match = re.match(r"^mlp(\d+)x_gelu$", mm_projector_type)
+            # FIXME(Zhouenshen): This is a temporary solution (only for metric scale factor projector), we need to improve it
+            mlp_hidden_size = config.spatial_hidden_size
+
             if mlp_gelu_match:
                 mlp_depth = int(mlp_gelu_match.group(1))
-                modules = [nn.Linear(config.mm_hidden_size, config.hidden_size)]
+                modules = [nn.Linear(config.hidden_size, mlp_hidden_size)]
                 for _ in range(1, mlp_depth):
                     modules.append(nn.GELU())
-                    modules.append(nn.Linear(config.hidden_size, config.hidden_size))
+                    modules.append(nn.Linear(mlp_hidden_size, mlp_hidden_size))
                 self.layers = nn.Sequential(*modules)
             else:
                 raise ValueError(f"Unknown projector type: {mm_projector_type}")

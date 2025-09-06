@@ -52,11 +52,12 @@ class MogeEncoder(nn.Module):
         _, _, img_h, img_w = images.shape
 
         # 计算图像的宽高比
-        aspect_ratio = img_w / img_h
+        # aspect_ratio = img_w / img_h
 
         # 根据token数量和宽高比，计算特征图的高和宽
-        base_h = int((self.spatial_tower_vision_num_tokens / aspect_ratio) ** 0.5)
-        base_w = int((self.spatial_tower_vision_num_tokens * aspect_ratio) ** 0.5)
+        # base_h = int((self.spatial_tower_vision_num_tokens / aspect_ratio) ** 0.5)
+        # base_w = int((self.spatial_tower_vision_num_tokens * aspect_ratio) ** 0.5)
+        base_h, base_w = int(self.spatial_tower_vision_num_tokens**0.5), int(self.spatial_tower_vision_num_tokens**0.5)
 
         # 使用MoGe2的encoder进行特征提取
         # features: (B, hidden_size, base_h, base_w)
@@ -70,7 +71,6 @@ class MogeEncoder(nn.Module):
         # 将features从 (B, hidden_size, base_h, base_w) 变为 (B, base_h * base_w, hidden_size)
         B, hidden_size, H, W = features.shape
         features = features.permute(0, 2, 3, 1).reshape(B, H * W, hidden_size)
-
         if self.spatial_tower_vision_select_feature == "cls_patch":
         # 拼接cls_token到features前面，得到 (B, base_h * base_w + 1, hidden_size)
             output = torch.cat([cls_token, features], dim=1)
