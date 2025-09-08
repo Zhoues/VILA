@@ -97,8 +97,7 @@ def prepare_config_for_training(
         config.spatial_tower_cfg = model_args.spatial_tower
     if getattr(config, "spatial_projector_cfg", None) is None:
         config.spatial_projector_cfg = model_args.spatial_projector
-    if getattr(config, "metric_scale_factor_projector_cfg", None) is None:
-        config.metric_scale_factor_projector_cfg = model_args.metric_scale_factor_projector
+
     # set default dtype
     config.model_dtype = torch.bfloat16 if training_args.bf16 else torch.float16
     config.model_dtype = config.model_dtype.__str__()
@@ -113,7 +112,6 @@ def prepare_config_for_training(
     # NOTE(Zhouenshen): Add spatial tower and projector training
     config.tune_spatial_tower = training_args.tune_spatial_tower
     config.tune_spatial_projector = training_args.tune_spatial_projector
-    config.tune_metric_scale_factor_projector = training_args.tune_metric_scale_factor_projector
 
     # set data args
     # Get the image_aspect_ratio from the config if is defined there

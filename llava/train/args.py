@@ -50,7 +50,6 @@ class ModelArguments:
     # NOTE(Zhouenshen): Add depth tower and projector arguments
     spatial_tower: Optional[str] = field(default="Ruicheng/moge-2-vitl-normal")
     spatial_projector: Optional[str] = field(default="mlp2x_gelu")
-    metric_scale_factor_projector: Optional[str] = field(default="mlp2x_gelu")
 
     mm_use_im_start_end: bool = field(default=False)
     mm_use_im_patch_token: bool = field(default=False)
@@ -231,7 +230,6 @@ class TrainingArguments(transformers.TrainingArguments):
     # NOTE(Zhouenshen): Add depth tower and projector training arguments
     tune_spatial_tower: bool = field(default=False)
     tune_spatial_projector: bool = field(default=False)
-    tune_metric_scale_factor_projector: bool = field(default=False)
     
     model_dtype: str = field(default="torch.bfloat16")
     model_max_length: int = field(

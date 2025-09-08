@@ -38,12 +38,7 @@ def build_mm_projector(model_type_or_path: str, config: PretrainedConfig) -> Pre
             print(f"Resume mm projector path {model_type_or_path} does not exist!")
             print(f"Building mm projector from scratch!")
 
-            if "metric_scale_factor_projector" in model_type_or_path:
-                # NOTE(Zhouenshen): Build metric scale factor projector 
-                new_projector_type = config.metric_scale_factor_projector_cfg.get("mm_projector_type", "mlp_downsample_3x3_fix")
-                new_projector_use_cls_token = config.metric_scale_factor_projector_cfg.get("spatial_tower_vision_select_feature", None)
-                new_projector_num_tokens = config.metric_scale_factor_projector_cfg.get("spatial_tower_vision_num_tokens", -1)
-            elif "spatial_projector" in model_type_or_path:
+            if "spatial_projector" in model_type_or_path:
                 # NOTE(Zhouenshen): Build spatial projector from scratch for MoGe2
                 new_projector_type = config.spatial_projector_cfg.get("mm_projector_type", "mlp_downsample_3x3_fix")
                 new_projector_use_cls_token = config.spatial_projector_cfg.get("spatial_tower_vision_select_feature", "cls_patch")

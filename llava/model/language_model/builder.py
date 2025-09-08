@@ -35,6 +35,7 @@ from transformers import (
 
 from llava.constants import MEDIA_TOKENS
 from llava.model.utils import packing
+from llava.train.utils import mprint
 from llava.utils.logging import logger
 from llava.utils.tokenizer import infer_stop_tokens
 
@@ -70,14 +71,20 @@ def build_llm_and_tokenizer(
     **kwargs,
 ) -> Tuple[PreTrainedModel, PreTrainedTokenizer]:
     
-    # NOTE(Zhouenshen): Register the Qwen2VLForConditionalGeneration model
-    from transformers import AutoModelForCausalLM, Qwen2VLConfig, Qwen2VLForConditionalGeneration
-    AutoModelForCausalLM.register(config_class=Qwen2VLConfig, model_class=Qwen2VLForConditionalGeneration)
-
+    # NOTE(Zhouenshen): Register the SpatialQwen2ForCausalLM model
+    from .spatial_qwen2 import SpatialQwen2ForCausalLM, SpatialQwen2Config
+    AutoConfig.register("spatial_qwen2", SpatialQwen2Config)
+    AutoModelForCausalLM.register(SpatialQwen2Config, SpatialQwen2ForCausalLM)
+    
     # print(model_name_or_path)
     llm_cfg = AutoConfig.from_pretrained(model_name_or_path)
     llm_cfg._attn_implementation = attn_implementation
     llm_cfg.model_max_length = model_max_length
+
+    # NOTE(Zhouenshen): Add spatial tower weights path to the LLM config to load spatial tower (e.g., MoGe-2) weights
+    if hasattr(config, "spatial_tower_weights_path") and not hasattr(llm_cfg, "spatial_tower_weights_path"):
+        llm_cfg.spatial_tower_weights_path = config.spatial_tower_weights_path
+
     if model_max_length is not None:
         context_length_extension(llm_cfg)
 

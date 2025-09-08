@@ -162,10 +162,6 @@ def load_pretrained_model(
             spatial_projector = model.get_spatial_projector()
             spatial_projector.to(device=device, dtype=torch.float16)
 
-        if model.get_metric_scale_factor_projector() is not None:
-            metric_scale_factor_projector = model.get_metric_scale_factor_projector()
-            metric_scale_factor_projector.to(device=device, dtype=torch.float16)
-
         image_processor = vision_tower.image_processor
 
     if hasattr(model.llm.config, "max_sequence_length"):
