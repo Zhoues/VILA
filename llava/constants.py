@@ -25,10 +25,11 @@ LOGDIR = "."
 IGNORE_INDEX = -100
 DEFAULT_IMAGE_TOKEN = "<image>"
 
-# NOTE(Zhouenshen): Add tokens for depth
-DEFAULT_DEPTH_TOKEN = "<depth>"
+# NOTE(Zhouenshen): Add tokens for spatial
+DEFAULT_SPATIAL_TOKEN = "<spatial>"
+DEFAULT_GEO_TOKEN = "[GEO]"
 
-# token: ['<|im_start|>', '<|im_end|>', '<vila/sentinel>', '<image>', '<vila/video>', '<depth>']
+# token: ['<|im_start|>', '<|im_end|>', '<vila/sentinel>', '<image>', '<vila/video>', '<spatial>']
 # id: [151644, 151645, 151648, 151649, 151650, 151651]
 # "\n": 198
 # " ": 220

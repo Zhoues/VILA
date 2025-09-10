@@ -10,7 +10,7 @@ import sys
 import torch
 import transformers
 from transformers.utils import logging
-from llava.constants import DEFAULT_DEPTH_TOKEN
+from llava.constants import DEFAULT_SPATIAL_TOKEN
 
 logger = logging.get_logger("transformers")
 

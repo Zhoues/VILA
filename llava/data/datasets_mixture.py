@@ -82,17 +82,18 @@ def register_datasets_mixtures():
 
     reason_template_qa_5_9M = Dataset(
         dataset_name="reason_template_qa_5_9M",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_template_qa.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/positive",
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/train_depth",
+        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/train_depth",
+        enable_spatial=True,
         description="5.9 M SFT data w/ depth from OpenImage."
     )
     add_dataset(reason_template_qa_5_9M)
 
     reason_template_qa_5_9M_RGB = Dataset(
         dataset_name="reason_template_qa_5_9M_RGB",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_template_qa.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/positive"
     )
@@ -181,17 +182,17 @@ def register_datasets_mixtures():
 
     ca1m_vacant_qa_231k = Dataset(
         dataset_name="ca1m_vacant_qa_231k",
-        dataset_type="spatialdataset",   
+        dataset_type="geometricdataset",   
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa_v2.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths",    
+        enable_spatial=True,
         description="231k SFT data w/ depth from CA-1M."    
     )
     add_dataset(ca1m_vacant_qa_231k)
 
     ca1m_vacant_qa_231k_RGB = Dataset(
         dataset_name="ca1m_vacant_qa_231k_RGB",
-        dataset_type="spatialdataset",   
+        dataset_type="geometricdataset",   
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa_v2.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images"
     )
@@ -478,3 +479,20 @@ def register_datasets_mixtures():
         enable_spatial=True,
     )
     add_dataset(sat_176k_RGB)
+
+    sat_metric_factor_test = Dataset(
+        dataset_name="sat_metric_factor_test",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/metric_factor_test/metadata.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images",
+        enable_spatial=True,
+    )
+    add_dataset(sat_metric_factor_test)
+
+    sat_metric_factor_test_RGB = Dataset(
+        dataset_name="sat_metric_factor_test_RGB",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/metric_factor_test/metadata.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images"
+    )
+    add_dataset(sat_metric_factor_test_RGB)

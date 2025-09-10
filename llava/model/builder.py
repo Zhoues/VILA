@@ -23,7 +23,7 @@ from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, BitsAn
 from llava.model import LlavaLlamaModel
 from llava.model.utils import is_mm_model
 
-from llava.constants import DEFAULT_DEPTH_TOKEN
+from llava.constants import DEFAULT_GEO_TOKEN, DEFAULT_SPATIAL_TOKEN
 
 
 def load_pretrained_model(
@@ -141,10 +141,12 @@ def load_pretrained_model(
         # NOTE(Zhouenshen): Add Special Token for llm tokenizer and vision tower
         enable_spatial = getattr(model.config, "enable_spatial", False)
         if enable_spatial:
-            num_new_tokens = tokenizer.add_tokens([DEFAULT_DEPTH_TOKEN], special_tokens=True)            
+            num_new_tokens = tokenizer.add_tokens([DEFAULT_SPATIAL_TOKEN, DEFAULT_GEO_TOKEN], special_tokens=True)            
             # record spatial token id in media token ids
-            tokenizer.media_token_ids["spatial"] = tokenizer.convert_tokens_to_ids(DEFAULT_DEPTH_TOKEN)
-            tokenizer.media_tokens["spatial"] = DEFAULT_DEPTH_TOKEN
+            tokenizer.media_token_ids["spatial"] = tokenizer.convert_tokens_to_ids(DEFAULT_SPATIAL_TOKEN)
+            tokenizer.media_tokens["spatial"] = DEFAULT_SPATIAL_TOKEN
+            config.spatial_token_ids = tokenizer.media_token_ids["spatial"]
+            config.geo_token_ids = tokenizer.convert_tokens_to_ids(DEFAULT_GEO_TOKEN)
 
         model.resize_token_embeddings(len(tokenizer))
         vision_tower = model.get_vision_tower()

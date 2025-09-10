@@ -31,7 +31,7 @@ from hydra.utils import instantiate
 from transformers import AutoConfig, GenerationConfig, LogitsProcessor
 from transformers.modeling_utils import ContextManagers, no_init_weights
 
-from llava.constants import DEFAULT_DEPTH_TOKEN, DEFAULT_IMAGE_TOKEN, IGNORE_INDEX, NUM_EXTRA_TOKENS
+from llava.constants import DEFAULT_GEO_TOKEN, DEFAULT_SPATIAL_TOKEN, DEFAULT_IMAGE_TOKEN, IGNORE_INDEX, NUM_EXTRA_TOKENS
 from llava.mm_utils import dynamic_process_depths_and_prompt, dynamic_process_images_and_prompt, dynamic_s2_process_depths_and_prompt, dynamic_s2_process_images_and_prompt, dynamic_process_images_and_prompt_for_spatial_encoder, process_depth, process_image, process_images, process_rgbd_inference_conversation
 from llava.model.configuration_llava import LlavaConfig, ResponseFormat
 from llava.model.language_model.builder import build_llm_and_tokenizer
@@ -94,7 +94,8 @@ class LlavaMetaModel(ABC):
         # NOTE(ligeng): for xgrammer init, <image> <vila/video> and <vila/sentinel>
         self.vocab_size = config.llm_cfg["vocab_size"] + NUM_EXTRA_TOKENS
         if hasattr(config, "enable_spatial") and config.enable_spatial:
-            self.vocab_size = self.vocab_size + 1
+            self.vocab_size = self.vocab_size + 2   # <spatial> and <geo>
+            mprint(f"Add Spatial and Geo token to vocabulary size. New vocabulary size: {self.vocab_size}")   
 
         # NOTE(Zhouenshen): Load spatial tower and projector ckpt if provided
         if hasattr(config, "enable_spatial") and config.enable_spatial:
@@ -122,12 +123,7 @@ class LlavaMetaModel(ABC):
             self.llm.model.build_metric_scale_factor_projector(self.llm.config)
             self.llm.model.build_metric_scale_factor_decoder(self.llm.config)
 
-
         mprint(self.llm)
-
-        import ipdb; ipdb.set_trace()
-
-
 
         self.encoders = {}
         for name in ["image", "video", 'spatial']:

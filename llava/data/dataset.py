@@ -36,7 +36,7 @@ from transformers import PreTrainedTokenizer
 
 import llava.data.datasets_mixture as datasets_mixture
 from llava import conversation as conversation_lib
-from llava.constants import DEFAULT_DEPTH_TOKEN, DEFAULT_IMAGE_TOKEN, IGNORE_INDEX
+from llava.constants import DEFAULT_SPATIAL_TOKEN, DEFAULT_IMAGE_TOKEN, IGNORE_INDEX
 from llava.data.collate import DataCollator
 from llava.mm_utils import (
     dynamic_process_images_and_prompt_for_spatial_encoder,
@@ -121,10 +121,10 @@ def preprocess_multimodal(sources: Sequence[str], data_args: DataArguments) -> D
 
     return sources
 
-def preprocess_rgbx(sources: Sequence[str], image_num: int, enable_new_modality: bool, data_args: DataArguments, special_token: str = DEFAULT_DEPTH_TOKEN) -> Dict:
+def preprocess_rgbx(sources: Sequence[str], image_num: int, enable_new_modality: bool, data_args: DataArguments, special_token: str = DEFAULT_SPATIAL_TOKEN) -> Dict:
     """
-    Preprocesses conversations that may contain RGB-D tokens in the form "<image> <depth>\n".
-    The goal is to move all occurrences of "<image> <depth>\n" (with exactly one space,
+    Preprocesses conversations that may contain RGB-D tokens in the form "<image> <spatial>\n".
+    The goal is to move all occurrences of "<image> <spatial>\n" (with exactly one space,
     and ending in a newline) to the beginning of the message value, in the order they
     originally appeared, followed by the remaining text.
 
@@ -1553,9 +1553,9 @@ class LazySupervisedGeometricDataset(Dataset):
             # process conversations
             if enable_dynamic_res_s2 or enable_dynamic_res:
                 if isinstance(image_file, list):
-                    sources = preprocess_rgbx(copy.deepcopy([e["conversations"] for e in sources]), len(image_file), self.enable_spatial, self.data_args, special_token=DEFAULT_DEPTH_TOKEN)
+                    sources = preprocess_rgbx(copy.deepcopy([e["conversations"] for e in sources]), len(image_file), self.enable_spatial, self.data_args, special_token=DEFAULT_SPATIAL_TOKEN)
                 else:
-                    sources = preprocess_rgbx(copy.deepcopy([e["conversations"] for e in sources]), 1, self.enable_spatial, self.data_args, special_token=DEFAULT_DEPTH_TOKEN)
+                    sources = preprocess_rgbx(copy.deepcopy([e["conversations"] for e in sources]), 1, self.enable_spatial, self.data_args, special_token=DEFAULT_SPATIAL_TOKEN)
 
             # image is a list of images, depth is a list of depths
             if isinstance(image_file, list):

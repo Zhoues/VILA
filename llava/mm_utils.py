@@ -28,7 +28,7 @@ import torch
 from PIL import Image
 from transformers import StoppingCriteria
 
-from llava.constants import DEFAULT_DEPTH_TOKEN, DEFAULT_IMAGE_TOKEN
+from llava.constants import DEFAULT_SPATIAL_TOKEN, DEFAULT_IMAGE_TOKEN
 
 
 def get_frame_from_vcap(vidcap, num_frames=10, max_fps=0.0, fps=None, frame_count=None, video_file_name=None):
@@ -422,20 +422,20 @@ def dynamic_process_images_and_prompt(images, prompt, data_args, image_folder=No
     return all_images, prompt
 
 def dynamic_process_depths_and_prompt(depths, prompt, data_args, depth_folder=None, max_tiles=None):
-    prompt = prompt.split(DEFAULT_DEPTH_TOKEN)
+    prompt = prompt.split(DEFAULT_SPATIAL_TOKEN)
     idx = 0
     all_depths = []
     for depth in depths:
         processed_depths = process_depth(depth, data_args, depth_folder, enable_dynamic_res=True, max_tiles=max_tiles)
         all_depths.append(processed_depths)
-        prompt.insert(idx + 1, f"{DEFAULT_DEPTH_TOKEN}\n" * processed_depths.shape[0])
+        prompt.insert(idx + 1, f"{DEFAULT_SPATIAL_TOKEN}\n" * processed_depths.shape[0])
         idx += 2
     prompt = "".join(prompt)
     if all_depths:
         all_depths = torch.cat(all_depths)
     else:
         all_depths = None
-        prompt = prompt.replace(DEFAULT_DEPTH_TOKEN, "")
+        prompt = prompt.replace(DEFAULT_SPATIAL_TOKEN, "")
     return all_depths, prompt
 
 
@@ -696,27 +696,27 @@ def get_model_name_from_path(model_path):
 
 
 def process_rgbd_inference_conversation(s):
-    # 1. 如果文本中没有 DEFAULT_DEPTH_TOKEN，直接返回原文本
-    if DEFAULT_DEPTH_TOKEN not in s:
+    # 1. 如果文本中没有 DEFAULT_SPATIAL_TOKEN，直接返回原文本
+    if DEFAULT_SPATIAL_TOKEN not in s:
         return s
 
-    # 2. 判断 DEFAULT_IMAGE_TOKEN 和 DEFAULT_DEPTH_TOKEN 的数量是否一致（唯一对应）
+    # 2. 判断 DEFAULT_IMAGE_TOKEN 和 DEFAULT_SPATIAL_TOKEN 的数量是否一致（唯一对应）
     image_count = len(re.findall(re.escape(DEFAULT_IMAGE_TOKEN), s))
-    depth_count = len(re.findall(re.escape(DEFAULT_DEPTH_TOKEN), s))
-    if image_count != depth_count:
+    spatial_count = len(re.findall(re.escape(DEFAULT_SPATIAL_TOKEN), s))
+    if image_count != spatial_count:
         return s
 
-    # 3. 清除文本中所有 DEFAULT_IMAGE_TOKEN 和 DEFAULT_DEPTH_TOKEN 标签，
+    # 3. 清除文本中所有 DEFAULT_IMAGE_TOKEN 和 DEFAULT_SPATIAL_TOKEN 标签，
     #    如果标签后面跟有换行符也一起清理（使用 \n? 来匹配换行符，如果存在的话）
     s_cleaned = re.sub(rf"{re.escape(DEFAULT_IMAGE_TOKEN)}\n?", "", s)
-    s_cleaned = re.sub(rf"{re.escape(DEFAULT_DEPTH_TOKEN)}\n?", "", s_cleaned)
+    s_cleaned = re.sub(rf"{re.escape(DEFAULT_SPATIAL_TOKEN)}\n?", "", s_cleaned)
 
     # 4. 去掉文本首尾可能存在的换行符
     s_cleaned = s_cleaned.strip("\n")
 
-    # 5. 根据统计的 DEFAULT_DEPTH_TOKEN 的数量，在文本前面添加 depth_count 个 "DEFAULT_IMAGE_TOKEN DEFAULT_DEPTH_TOKEN\n"
+    # 5. 根据统计的 DEFAULT_SPATIAL_TOKEN 的数量，在文本前面添加 spatial_count 个 "DEFAULT_IMAGE_TOKEN DEFAULT_SPATIAL_TOKEN\n"
     #    因为 image_count == depth_count，此处就按照 depth_count 来构建前缀
-    prefix = (f"{DEFAULT_IMAGE_TOKEN} {DEFAULT_DEPTH_TOKEN}\n") * depth_count
+    prefix = (f"{DEFAULT_IMAGE_TOKEN} {DEFAULT_SPATIAL_TOKEN}\n") * spatial_count
 
     return prefix + s_cleaned
 

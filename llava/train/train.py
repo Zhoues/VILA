@@ -31,7 +31,7 @@ from transformers.modeling_utils import unwrap_model
 import llava.data.dataset as dataset
 import llava.data.datasets_mixture as datasets_mixture
 from llava import conversation as conversation_lib
-from llava.constants import DEFAULT_DEPTH_TOKEN, IGNORE_INDEX
+from llava.constants import DEFAULT_GEO_TOKEN, DEFAULT_SPATIAL_TOKEN, IGNORE_INDEX
 from llava.data import make_supervised_data_module
 from llava.mm_utils import process_image
 from llava.model import LlavaLlamaConfig, LlavaLlamaModel
@@ -721,20 +721,22 @@ def train():
         num_new_tokens = 0
         
         if model_args.enable_spatial:
-            num_new_tokens = tokenizer.add_tokens([DEFAULT_DEPTH_TOKEN], special_tokens=True)
+            num_new_tokens = tokenizer.add_tokens([DEFAULT_SPATIAL_TOKEN, DEFAULT_GEO_TOKEN], special_tokens=True)
             # record depth token id in media token ids
-            tokenizer.media_token_ids['spatial'] = tokenizer.convert_tokens_to_ids(DEFAULT_DEPTH_TOKEN)
-            tokenizer.media_tokens['spatial'] = DEFAULT_DEPTH_TOKEN
+            tokenizer.media_token_ids['spatial'] = tokenizer.convert_tokens_to_ids(DEFAULT_SPATIAL_TOKEN)
+            tokenizer.media_tokens['spatial'] = DEFAULT_SPATIAL_TOKEN
+            model.llm.model.config.spatial_token_ids = config.spatial_token_ids = tokenizer.media_token_ids['spatial']
+            model.llm.model.config.geo_token_ids = config.geo_token_ids = tokenizer.convert_tokens_to_ids(DEFAULT_GEO_TOKEN)
         
         model.resize_token_embeddings(len(tokenizer))
 
         # NOTE(Zhouenshen): fintune llm input embedding
         if num_new_tokens > 0 and training_args.tune_spatial_projector:
-            mprint(f"Add Depth (Spatial) token id: {tokenizer.media_token_ids['spatial']}")
+            mprint(f"Add Spatial and Geo token id: {config.spatial_token_ids} and {config.geo_token_ids}")
             # embedding_layer = model.get_input_embeddings()  # Embedding layer, shape: [vocab_size, embedding_dim]
             # embedding_weight = embedding_layer.weight  # parameter: shape [vocab_size, hidden_size]
             # embedding_weight.requires_grad = True
-            # mprint("After adding depth token, fine-tune LLM input embedding")
+            # mprint("After adding spatial and geo token, fine-tune LLM input embedding")
 
         model.config.num_time_tokens = data_args.num_time_tokens = model_args.num_time_tokens
         model.config.time_token_format = data_args.time_token_format = model_args.time_token_format

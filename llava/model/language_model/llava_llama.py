@@ -102,7 +102,7 @@ class LlavaLlamaModel(LlavaMetaModel, LlavaMetaForCausalLM, PreTrainedModel):
         past_key_values: Optional[List[torch.FloatTensor]] = None,
         inputs_embeds: Optional[torch.FloatTensor] = None,
         labels: Optional[torch.LongTensor] = None,
-        packing: bool = True,
+        packing: bool = False,  # NOTE(Zhouenshen): packing is set to False for `SpatialQwen2ForCausalLM` for computing the new loss
         seqlens_in_batch: Optional[torch.LongTensor] = None,
         dpo_forward: bool = False,
         **kwargs,
@@ -136,6 +136,7 @@ class LlavaLlamaModel(LlavaMetaModel, LlavaMetaForCausalLM, PreTrainedModel):
             position_ids=position_ids,
             past_key_values=past_key_values,
             labels=labels,
+            input_ids_raw=input_ids,   # NOTE(Zhouenshen): input_ids is needed for `SpatialQwen2ForCausalLM` for computing the new loss
             **kwargs,
         )
 
