@@ -163,7 +163,7 @@ def register_datasets_mixtures():
 
     ca1m_vacant_qa_121k = Dataset(
         dataset_name="ca1m_vacant_qa_121k",
-        dataset_type="geometricdataset",   
+        dataset_type="spatialdataset",   
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
         depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths",    
@@ -173,7 +173,7 @@ def register_datasets_mixtures():
 
     ca1m_vacant_qa_121k_RGB = Dataset(
         dataset_name="ca1m_vacant_qa_121k_RGB",
-        dataset_type="geometricdataset",   
+        dataset_type="spatialdataset",   
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images"
     )

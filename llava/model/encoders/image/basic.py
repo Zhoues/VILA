@@ -39,21 +39,33 @@ class BasicImageEncoder(BaseEncoder):
         return features
 
     def forward(self, images: List[torch.Tensor], config: Dict[str, Any], is_spatial: bool = False, enable_spatial: bool = True) -> List[torch.Tensor]:
+        images = torch.stack(images, dim=0)
+        features = self.parent.encode_images(images, block_sizes=config.get("block_sizes"), is_spatial=is_spatial, enable_spatial=enable_spatial)
         process_features = partial(
             self._process_features,
             start_token_embeds=self.embed_tokens(self.start_tokens),
             end_token_embeds=self.embed_tokens(self.end_tokens),
         )
-        if is_spatial and enable_spatial:
-            # NOTE(Zhouenshen): Process each image separately, as MoGe-2 does not support patch processing
-            process_features_list = []
-            for image in images:
-                image_features = self.parent.encode_images(image.unsqueeze(0), block_sizes=config.get("block_sizes"), is_spatial=is_spatial, enable_spatial=enable_spatial)
-                process_features_list.append(process_features(image_features.squeeze(0)))
-            return process_features_list
-        else:
-            images = torch.stack(images, dim=0)
-            features = self.parent.encode_images(images, block_sizes=config.get("block_sizes"), is_spatial=is_spatial, enable_spatial=enable_spatial) 
-            return [process_features(f) for f in features]
+        return [process_features(f) for f in features]
+
+    # def forward(self, images: List[torch.Tensor], config: Dict[str, Any], is_spatial: bool = False, enable_spatial: bool = True) -> List[torch.Tensor]:
+    #     process_features = partial(
+    #         self._process_features,
+    #         start_token_embeds=self.embed_tokens(self.start_tokens),
+    #         end_token_embeds=self.embed_tokens(self.end_tokens),
+    #     )
+    #     # images: [batch_size, num_images, channels, height, width]
+        
+    #     if is_spatial and enable_spatial:
+    #         # NOTE(Zhouenshen): Process each image separately, as MoGe-2 does not support patch processing
+    #         process_features_list = []
+    #         for image in images:
+    #             image_features = self.parent.encode_images(image.unsqueeze(0), block_sizes=config.get("block_sizes"), is_spatial=is_spatial, enable_spatial=enable_spatial)
+    #             process_features_list.append(process_features(image_features.squeeze(0)))
+    #         return process_features_list
+    #     else:
+    #         images = torch.stack(images, dim=0)
+    #         features = self.parent.encode_images(images, block_sizes=config.get("block_sizes"), is_spatial=is_spatial, enable_spatial=enable_spatial) 
+    #         return [process_features(f) for f in features]
 
 

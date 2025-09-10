@@ -440,6 +440,17 @@ def dynamic_process_depths_and_prompt(depths, prompt, data_args, depth_folder=No
 
 
 def dynamic_process_images_and_prompt_for_spatial_encoder(images, prompt, data_args, image_folder=None, max_tiles=None):
+    # NOTE(Zhouenshen): Get the target image size
+    if hasattr(data_args.image_processor, "crop_size"):
+        # CLIP vision tower
+        crop_size = data_args.image_processor.crop_size
+    else:
+        # SIGLIP vision tower
+        assert hasattr(data_args.image_processor, "size")
+        crop_size = data_args.image_processor.size
+    
+    target_image_size = crop_size["height"]
+
     all_images = []
     for image in images:
 
@@ -455,6 +466,9 @@ def dynamic_process_images_and_prompt_for_spatial_encoder(images, prompt, data_a
             image_img = image
         else:
             raise ValueError(f"Invalid image type: {type(image)}")
+
+        # NOTE(Zhouenshen): Resize the image to the target image size
+        image_img = image_img.resize((target_image_size, target_image_size))
 
         image_np = np.array(image_img) / 255.0  # shape: (H, W, 3), dtype: float64
         processed_images = torch.tensor(image_np, dtype=torch.float32).permute(2, 0, 1).unsqueeze(0)
@@ -499,29 +513,46 @@ def dynamic_s2_process_depths_and_prompt(depths, prompt, data_args, depth_folder
     return all_depths, all_block_size
 
 def dynamic_s2_process_images_and_prompt_for_spatial_encoder(images, prompt, data_args, image_folder=None):
+    # NOTE(Zhouenshen): Get the target image size
+    if hasattr(data_args.image_processor, "crop_size"):
+        # CLIP vision tower
+        crop_size = data_args.image_processor.crop_size
+    else:
+        # SIGLIP vision tower
+        assert hasattr(data_args.image_processor, "size")
+        crop_size = data_args.image_processor.size
+    
+    target_image_size = crop_size["height"]
+
     all_images = []
-    all_block_size = []
     for image in images:
 
-        # NOTE(Zhouenshen): 使用 MoGe-2 的方式处理图片
-        if image_folder is not None:
-            image_path = os.path.join(image_folder, image)
-            depth_img = Image.open(depth_path).convert("RGB")  # 确保是 RGB 格式
-            depth_np = np.array(depth_img) / 255.0  # shape: (H, W, 3), dtype: float64
-            processed_depths = torch.tensor(depth_np, dtype=torch.float32).permute(2, 0, 1).unsqueeze(0)
+        if isinstance(image, str):
+            # NOTE(Zhouenshen): 使用 MoGe-2 的方式处理图片
+            if image_folder is not None:
+                image_path = os.path.join(image_folder, image)
+                image_img = Image.open(image_path).convert("RGB")  # 确保是 RGB 格式
+            else:
+                image_img = Image.open(image).convert("RGB")  # 确保是 RGB 格式
+        elif isinstance(image, Image.Image):
+            image_img = image.convert("RGB")
+            image_img = image
         else:
-            image_img = Image.open(image).convert("RGB")  # 确保是 RGB 格式
-            depth_np = np.array(depth_img) / 255.0  # shape: (H, W, 3), dtype: float64
-            processed_depths = torch.tensor(depth_np, dtype=torch.float32).permute(2, 0, 1).unsqueeze(0)
+            raise ValueError(f"Invalid image type: {type(image)}")
 
-        all_depths.append(processed_depths)
+        # NOTE(Zhouenshen): Resize the image to the target image size
+        image_img = image_img.resize((target_image_size, target_image_size))
 
-    if all_depths:
-        all_depths = torch.cat(all_depths)
+        image_np = np.array(image_img) / 255.0  # shape: (H, W, 3), dtype: float64
+        processed_images = torch.tensor(image_np, dtype=torch.float32).permute(2, 0, 1).unsqueeze(0)
+        all_images.append(processed_images)
+
+    if all_images:
+        all_images = torch.cat(all_images)
     else:
-        all_depths = None
+        all_images = None
 
-    return all_depths, all_block_size
+    return all_images, prompt
 
 
 def process_depth(
