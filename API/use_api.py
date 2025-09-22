@@ -3,139 +3,186 @@ import cv2
 import numpy as np
 import re, json, os
 from PIL import Image
-def json2pts(json_text):
-    # 去除 markdown 代码块标记（```json ... ```)
-    json_cleaned = re.sub(r"^```json\n|\n```$", "", json_text.strip())
+from datetime import datetime  # <--- 1. 导入datetime模块
 
+# --- 日志文件处理函数 ---
+JSON_LOG_FILE = "results_log.json"
+
+def load_log_file(filepath):
+    """安全地加载JSON日志文件，如果文件不存在则返回一个空列表。"""
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"警告: 无法读取或解析 '{filepath}'。将创建一个新的日志。错误: {e}")
+            return []
+    return []
+
+def save_log_file(filepath, data):
+    """将数据以格式化的方式保存到JSON日志文件中。"""
+    try:
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        print(f"结果已成功更新到: {filepath}")
+    except IOError as e:
+        print(f"错误: 无法写入文件 '{filepath}'. 错误: {e}")
+
+# --- 您已有的函数 (保持不变) ---
+def json2pts(json_text):
+    match = re.search(r"```(?:\w+)?\n(.*?)```", json_text, re.DOTALL)
+    if not match:
+        print("在Gemini结果中未找到有效的代码块。")
+        return np.empty((0, 2), dtype=int)
+    json_cleaned = match.group(1).strip()
     try:
         data = json.loads(json_cleaned)
     except json.JSONDecodeError as e:
-        print(f"JSON decode error: {e}")
-        return np.empty((0, 2), dtype=int)
-
+        print(f"JSON解码错误: {e}")
+        return np.empty((0, 2), dtype=int)  
     points = []
     for item in data:
         if "point" in item and isinstance(item["point"], list) and len(item["point"]) == 2:
-            y_norm, x_norm = item["point"]  # 输入是 (y, x)
-            # 归一化范围是 0~1000
+            y_norm, x_norm = item["point"]
             x = x_norm / 1000.0
             y = y_norm / 1000.0
-            points.append((x, y))  # 返回 (x, y)
+            points.append((x, y))
     return np.array(points)
 
 def resize_and_save_image(image_path):
-    """
-    读取指定绝对路径的图片，将其尺寸缩放为原来的一半，
-    保存在当前工作目录下，并返回新图片的绝对路径。
-    """
     if not os.path.isabs(image_path):
         print(f"错误: 输入的路径 '{image_path}' 不是一个绝对路径。")
         return None
-
     if not os.path.exists(image_path):
         print(f"错误: 文件 '{image_path}' 不存在。")
         return None
-
     try:
-        # 1. 读取绝对路径的图片
         img = Image.open(image_path)
-        print(f"成功读取图片: {image_path}")
-        print(f"原始尺寸: {img.size} (width, height)")
-
-        # 获取原始尺寸
         original_width, original_height = img.size
-
-        # 计算新尺寸（原来的一半）
         new_width = original_width // 2
         new_height = original_height // 2
-        print(f"新尺寸 (原来的一半): ({new_width}, {new_height})")
-
-        # 2. resize 为原来的二分之一
         resized_img = img.resize((new_width, new_height))
-
-        # 3. 保存在当前文件夹下面
-        # 获取当前工作目录的绝对路径
         current_directory = os.getcwd()
-
-        # 获取原文件名和扩展名
         base_name = os.path.basename(image_path)
         name, ext = os.path.splitext(base_name)
-
-        # 构建新的文件名 (例如: original_image_resized.jpg)
-        new_file_name = f"{name}_resized{ext}"
-
-        # 构建新图片的完整保存路径 (当前目录 + 新文件名)
+        new_file_name = f"resize_image/{name}_resized{ext}"
         save_path = os.path.join(current_directory, new_file_name)
-
-        # 检查是否已存在同名文件并提供反馈 (可选)
-        if os.path.exists(save_path):
-            print(f"注意: 文件 '{new_file_name}' 在当前目录已存在，将被覆盖。")
-
-        # 保存图片
         resized_img.save(save_path)
-        print(f"图片已成功保存到: {save_path}")
-
-        # 关闭图片对象释放资源
         img.close()
         resized_img.close()
-
-        # 4. 读取一下这个新图片的绝对路径 (就是上面的 save_path)
-        # save_path 已经是绝对路径了，因为 current_directory 是绝对路径
-        new_image_absolute_path = save_path
-        print(f"新图片的绝对路径是: {new_image_absolute_path}")
-
-        return new_image_absolute_path
-
-    except FileNotFoundError:
-        print(f"错误: 文件 '{image_path}' 未找到。请检查路径是否正确。")
-        return None
+        print(f"图片已成功缩放并保存到: {save_path}")
+        return save_path
     except Exception as e:
         print(f"处理图片时发生错误: {e}")
         return None
         
-def denormalize_and_mark(image_path, normalized_points, output_path="output.jpg", color=(0, 0, 255), radius=4):
+def denormalize_and_mark(image_path, normalized_points, output_path="output.jpg", color=(0, 0, 255), radius=10):
     image = cv2.imread(image_path)
     if image is None:
         raise FileNotFoundError(f"无法读取图像文件: {image_path}")
-
     height, width = image.shape[:2]
-
     for nx, ny in normalized_points:
         x = int(nx * width)
         y = int(ny * height)
         cv2.circle(image, (x, y), radius, color, thickness=-1)
-
     cv2.imwrite(output_path, image)
     print(f"已保存标注图像到: {output_path}")
 
-# 主代码
-test_image_path = "image.jpg"
-test_prompt = "Please point to the leftmost mug"
-suffix = "Your answer should be formatted as a list of tuples, i.e. [(x1, y1)], where each tuple contains the x and y coordinates of a point satisfying the conditions above. The coordinates should be between 0 and 1, indicating the normalized pixel locations of the points in the image."
-new_test_image_path = resize_and_save_image(test_image_path)
-test_image_paths = [str(new_test_image_path)]
+# --- 主代码 ---
 
-answer = query_server(
+# 1. 加载现有日志
+all_results = load_log_file(JSON_LOG_FILE)
+
+# 2. 设置本次运行的参数
+test_image_path = "/share/project/zhouenshen/hpfs/code/NIPS-Rebuttal-Benchmark/sampled_images_1000_20250728_005024/0293.jpg"
+target = "the building on the right which is the third building from the front to back"
+test_prompt = f"Please point to {target}"
+suffix = "Your answer should be formatted as a list of tuples, i.e. [(x1, y1)], where each tuple contains the x and y coordinates of a point satisfying the conditions above. The coordinates should be between 0 and 1, indicating the normalized pixel locations of the points in the image."
+# --- 主要改动在这里 ---
+# 3. 为本次运行生成唯一标识符
+run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") # <--- 2. 生成唯一时间戳
+print(f"本次运行的唯一标识符 (时间戳): {run_timestamp}")
+
+# 3. 准备图片和数据结构
+new_test_image_path = resize_and_save_image(test_image_path)
+if not new_test_image_path:
+    print("图片处理失败，程序退出。")
+    exit()
+
+test_image_paths = [str(new_test_image_path)]
+image_basename = os.path.splitext(os.path.basename(new_test_image_path))[0]
+
+# 创建当前运行的记录字典
+current_run_data = {
+    "run_id": run_timestamp, # <--- 新增一个ID字段
+    "image_path": new_test_image_path,
+    "target_description": target,
+    "our_model_output_image": f"./test_output/{image_basename}_{run_timestamp}_our_result.jpg",
+    "gemini_model_output_image": f"./test_output/{image_basename}_{run_timestamp}_gemini_result.jpg",
+    "our_model_correct": None,
+    "gemini_model_correct": None,
+    "steps": None
+}
+
+print("\n--- 开始查询'Our Model' ---")
+our_answer = query_server(
     test_image_paths,
-    test_prompt + suffix,
+    test_prompt + " " + suffix,
     url="http://127.0.0.1:25547",
     enable_depth=1
 )
+our_normalized_points = eval(our_answer.strip())
+denormalize_and_mark(new_test_image_path, our_normalized_points, output_path=current_run_data["our_model_output_image"])
 
-# 转换字符串为坐标点
-normalized_points = eval(answer.strip())
-
-# 绘制点并保存图像
-denormalize_and_mark(new_test_image_path, normalized_points, output_path="our_result.jpg")
-
-gemini_prompt = "Locate the point of the white object which is behind the alarm clock."
-answer = query_gemini_2_5_pro(
+print("\n--- 开始查询'Gemini Model' ---")
+gemini_prompt = f"Locate the point of {target}"
+gemini_answer = query_gemini_2_5_pro(
     test_image_paths,
     gemini_prompt,
 )
+gemini_normalized_points = json2pts(gemini_answer.strip())
+denormalize_and_mark(new_test_image_path, gemini_normalized_points, output_path=current_run_data["gemini_model_output_image"])
 
-# 转换字符串为坐标点
-normalized_points = json2pts(answer.strip())
+# 4. 获取用户输入进行评估
+print("\n--- 请对结果进行评估 ---")
+print(f"Target: {target}")
+print(f"请查看图片: {current_run_data['our_model_output_image']} 和 {current_run_data['gemini_model_output_image']}")
 
-# 绘制点并保存图像
-denormalize_and_mark(new_test_image_path, normalized_points, output_path="gemini_result.jpg")
+# 获取'our'模型评估
+while True:
+    our_correct = input("'Our'模型的输出是否正确? (y/n): ").lower()
+    if our_correct in ['y', 'yes']:
+        current_run_data['our_model_correct'] = True
+        break
+    elif our_correct in ['n', 'no']:
+        current_run_data['our_model_correct'] = False
+        break
+    else:
+        print("输入无效，请输入 'y' 或 'n'.")
+
+# 获取'gemini'模型评估
+while True:
+    gemini_correct = input("'Gemini'模型的输出是否正确? (y/n): ").lower()
+    if gemini_correct in ['y', 'yes']:
+        current_run_data['gemini_model_correct'] = True
+        break
+    elif gemini_correct in ['n', 'no']:
+        current_run_data['gemini_model_correct'] = False
+        break
+    else:
+        print("输入无效，请输入 'y' 或 'n'.")
+
+# 获取识别步骤数
+while True:
+    try:
+        steps = int(input("确定这个target需要多少步(step)? "))
+        current_run_data['steps'] = steps
+        break
+    except ValueError:
+        print("输入无效，请输入一个整数。")
+
+# 5. 更新并保存日志文件
+all_results.append(current_run_data)
+save_log_file(JSON_LOG_FILE, all_results)
+
+print("\n--- 本次运行记录完成 ---")

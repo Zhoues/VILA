@@ -63,17 +63,18 @@ def register_datasets_mixtures():
     ### OpenImage (2D Dataset)
     choice_qa_4M = Dataset(
         dataset_name="choice_qa_4M",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_choice_qa.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/positive",
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/train_depth",
+        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/train_depth",
+        enable_spatial=True,
         description="4 M SFT data w/ depth from OpenImage."
     )
     add_dataset(choice_qa_4M)
 
     choice_qa_4M_RGB = Dataset(
         dataset_name="choice_qa_4M_RGB",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_choice_qa.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/positive"
     )
@@ -105,17 +106,18 @@ def register_datasets_mixtures():
 
     ca1m_reasoning_template_qa_3_2M_split = Dataset(
         dataset_name="ca1m_reasoning_template_qa_3_2M_split",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_reasoning_template_qa_split.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths",    
+        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths",    
+        enable_spatial=True,
         description="3.3 M SFT data w/ depth from CA-1M."
     )
     add_dataset(ca1m_reasoning_template_qa_3_2M_split)
 
     ca1m_reasoning_template_qa_3_2M_split_RGB = Dataset(
         dataset_name="ca1m_reasoning_template_qa_3_2M_split_RGB",
-        dataset_type="spatialdataset",   
+        dataset_type="geometricdataset",   
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_reasoning_template_qa_split.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images"
     )
@@ -125,10 +127,11 @@ def register_datasets_mixtures():
 
     ca1m_choice_qa_2_1M_split = Dataset(
         dataset_name="ca1m_choice_qa_2_1M_split",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_choice_qa_split.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths",    
+        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths", 
+        enable_spatial=True,
         description="2.1 M SFT data w/ depth from CA-1M."
     )
     add_dataset(ca1m_choice_qa_2_1M_split)
@@ -136,7 +139,7 @@ def register_datasets_mixtures():
 
     ca1m_choice_qa_2_1M_split_RGB = Dataset(
         dataset_name="ca1m_choice_qa_2_1M_split_RGB",
-        dataset_type="spatialdataset",   
+        dataset_type="geometricdataset",   
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_choice_qa_split.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images"
     )
@@ -145,17 +148,18 @@ def register_datasets_mixtures():
 
     ca1m_visual_choice_qa_341k = Dataset(
         dataset_name="ca1m_visual_choice_qa_341k",
-        dataset_type="spatialdataset",   
+        dataset_type="geometricdataset",   
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_visual_choice_qa.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/visual_choice_qa_images",
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths",
+        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths",
+        enable_spatial=True,
         description="341k SFT data w/ depth from CA-1M."
     )
     add_dataset(ca1m_visual_choice_qa_341k)
 
     ca1m_visual_choice_qa_341k_RGB = Dataset(
         dataset_name="ca1m_visual_choice_qa_341k_RGB",
-        dataset_type="spatialdataset",   
+        dataset_type="geometricdataset",   
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_visual_choice_qa.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/visual_choice_qa_images"
     )
@@ -163,17 +167,18 @@ def register_datasets_mixtures():
 
     ca1m_vacant_qa_121k = Dataset(
         dataset_name="ca1m_vacant_qa_121k",
-        dataset_type="spatialdataset",   
+        dataset_type="geometricdataset",   
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths",    
+        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths",    
+        enable_spatial=True,
         description="121k SFT data w/ depth from CA-1M."    
     )
     add_dataset(ca1m_vacant_qa_121k)
 
     ca1m_vacant_qa_121k_RGB = Dataset(
         dataset_name="ca1m_vacant_qa_121k_RGB",
-        dataset_type="spatialdataset",   
+        dataset_type="geometricdataset",   
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images"
     )
@@ -200,17 +205,18 @@ def register_datasets_mixtures():
 
     ca1m_multi_view_qa_77k = Dataset(
         dataset_name="ca1m_multi_view_qa_77k",
-        dataset_type="spatialdataset",   
+        dataset_type="geometricdataset",   
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_multi_view_qa.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images_multi_view",
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths_multi_view",    
+        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths_multi_view",    
+        enable_spatial=True,
         description="77k SFT data w/ depth from CA-1M."    
     )
     add_dataset(ca1m_multi_view_qa_77k)
 
     ca1m_multi_view_qa_77k_RGB = Dataset(
         dataset_name="ca1m_multi_view_qa_77k_RGB",
-        dataset_type="spatialdataset",   
+        dataset_type="geometricdataset",   
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_multi_view_qa.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images_multi_view"
     )
@@ -219,17 +225,18 @@ def register_datasets_mixtures():
     ### Simulator (2D Dataset)
     simulator_216k = Dataset(
         dataset_name="simulator_216k",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/metadata_split_10.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/images",
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/depths",
+        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/depths",
+        enable_spatial=True,
         description="216k SFT data w/ depth from Simulator."
     )
     add_dataset(simulator_216k)
 
     simulator_216k_RGB = Dataset(
         dataset_name="simulator_216k_RGB",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/metadata_split_10.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/images"
     )
@@ -237,17 +244,18 @@ def register_datasets_mixtures():
 
     simulator_246k = Dataset(
         dataset_name="simulator_246k",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/metadata_new_split_10.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/images",
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/depths",
+        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/depths",
+        enable_spatial=True,
         description="246k SFT data w/ depth from Simulator."
     )
     add_dataset(simulator_246k)
 
     simulator_246k_RGB = Dataset(
         dataset_name="simulator_246k_RGB",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/metadata_new_split_10.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/images"
     )
@@ -259,17 +267,18 @@ def register_datasets_mixtures():
 
     refcoco_1_2M = Dataset(
         dataset_name="refcoco_1_2M",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcoco/metadata.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014",
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014_depths",
+        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014_depths",
+        enable_spatial=True,
         description="1.2 M SFT data w/ depth from RefCOCO."
     )
     add_dataset(refcoco_1_2M)
 
     refcoco_1_2M_RGB = Dataset(
         dataset_name="refcoco_1_2M_RGB",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcoco/metadata.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014"
     )
@@ -277,17 +286,18 @@ def register_datasets_mixtures():
 
     refcocop_1_2M = Dataset(
         dataset_name="refcocop_1_2M",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocop/metadata.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014",
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014_depths",
+        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014_depths",
+        enable_spatial=True,
         description="1.2 M SFT data w/ depth from RefCOCOp."
     )
     add_dataset(refcocop_1_2M)
 
     refcocop_1_2M_RGB = Dataset(
         dataset_name="refcocop_1_2M_RGB",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocop/metadata.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014"
     )
@@ -295,17 +305,18 @@ def register_datasets_mixtures():
 
     refcocog_80k = Dataset(
         dataset_name="refcocog_80k",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocog/metadata.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014", 
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014_depths",
+        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014_depths",
+        enable_spatial=True,
         description="80k SFT data w/ depth from RefCOCOg."
     )
     add_dataset(refcocog_80k)
 
     refcocog_80k_RGB = Dataset(
         dataset_name="refcocog_80k_RGB",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocog/metadata.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014"
     )
@@ -313,17 +324,18 @@ def register_datasets_mixtures():
 
     refcocog_80k = Dataset(
         dataset_name="refcocog_80k",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocog/metadata.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014", 
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014_depths",
+        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014_depths",
+        enable_spatial=True,
         description="80k SFT data w/ depth from RefCOCOg."
     )
     add_dataset(refcocog_80k)
 
     refcocog_80k_RGB = Dataset(
         dataset_name="refcocog_80k_RGB",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocog/metadata.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014"
     )
@@ -357,17 +369,18 @@ def register_datasets_mixtures():
 
     embspatial_127k = Dataset(
         dataset_name="embspatial_127k",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/metadata.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/images",
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/depths",
+        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/depths",
+        enable_spatial=True,
         description="127k SFT data w/ depth from EmbSpatial."
     )
     add_dataset(embspatial_127k)
 
     embspatial_127k_RGB = Dataset(
         dataset_name="embspatial_127k_RGB",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/metadata.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/images"
     )
@@ -376,17 +389,18 @@ def register_datasets_mixtures():
 
     embspatial_12k_random = Dataset(
         dataset_name="embspatial_12k_random",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/metadata_random.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/images_random",
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/depths_random",
+        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/depths_random",
+        enable_spatial=True,
         description="12k SFT data w/ depth from EmbSpatial."
     )
     add_dataset(embspatial_12k_random)
 
     embspatial_12k_random_RGB = Dataset(
         dataset_name="embspatial_12k_random_RGB",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/metadata_random.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/images_random"
     )
@@ -394,17 +408,18 @@ def register_datasets_mixtures():
 
     blink_spatial_relation = Dataset(
         dataset_name="blink_spatial_relation",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/BLINK/metadata_Spatial_Relation.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/BLINK/images",
-        depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/BLINK/depths",
+        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/BLINK/depths",
+        enable_spatial=True,
         description="572 SFT data w/ depth from BLINK."
     )
     add_dataset(blink_spatial_relation)
 
     blink_spatial_relation_RGB = Dataset(
         dataset_name="blink_spatial_relation_RGB",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/BLINK/metadata_Spatial_Relation.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/BLINK/images"
     )
@@ -415,9 +430,10 @@ def register_datasets_mixtures():
     ### RefSpatial
     refSpatial = Dataset(
         dataset_name="refSpatial",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/RefSpatial/refspatial_new_sim.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/RefSpatial",
+        enable_spatial=True,
         description="SFT data from RefSpatial."
     )
     add_dataset(refSpatial)
@@ -426,7 +442,7 @@ def register_datasets_mixtures():
 
     llava_1_5_lrv_mix_965k = Dataset(
         dataset_name="llava_1_5_lrv_mix_965k",
-        dataset_type="spatialdataset",
+        dataset_type="geometricdataset",
         data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/llava_v1_5_lrv_mix965k.json",
         image_path="/share/project/emllm_mnt.1d/hpfs/baaiei/vlm/robobrain_train_images",
     )

@@ -8,7 +8,7 @@ export WANDB_MODE=offline
 # export BASE_RUN_NAME="depth-sft-old_placement+old_simulator-use_v2_align"
 export BASE_RUN_NAME="depth-sft-old_placement+new_simulator"
 # export BASE_RUN_NAME="test"
-export STAGE_PATH=/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-depth-align-new_placement+new_simulator/model
+export STAGE_PATH=/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-depth-align-new_placement+new_simulator/model/
 export VISION_TOWER=/share/project/zhouenshen/hpfs/ckpt/vlm/paligemma-siglip-so400m-patch14-448
 export DEPTH_TOWER=/share/project/zhouenshen/hpfs/ckpt/vlm/paligemma-siglip-so400m-patch14-448
 

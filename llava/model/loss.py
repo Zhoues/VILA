@@ -1,7 +1,7 @@
 from typing import List, Union
 
 import torch
-from torch.nn.functional import cross_entropy
+from torch.nn.functional import cross_entropy, mse_loss
 
 from llava.constants import IGNORE_INDEX
 
@@ -48,3 +48,13 @@ def soft_cross_entropy(
     return loss / targets.size(0)
 
 
+def metric_scale_factor_loss_function(
+    outputs: torch.Tensor,  # shape: (num_geo, out_dim)
+    targets: torch.Tensor,  # shape: (num_geo, out_dim)
+) -> torch.Tensor:
+    """
+        Calculate the loss for the metric scale factor.
+    """
+    log_hat = torch.log(outputs)
+    log_star = torch.log(targets.detach() + 1e-8)
+    return mse_loss(log_hat, log_star, reduction="mean") / outputs.size(0)

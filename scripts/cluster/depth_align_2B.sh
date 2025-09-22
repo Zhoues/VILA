@@ -5,10 +5,10 @@ conda activate /share/project/zhouenshen/miniconda3/envs/vila
 export PYTHONPATH=$(pwd)
 export WANDB_MODE=offline
 
-export BASE_RUN_NAME="depth-align-new_placement+new_simulator"
-export STAGE_PATH=/share/project/zhouenshen/hpfs/ckpt/vlm/NVILA-Lite-2B-depth
+export BASE_RUN_NAME="Spatial-Align"
+export STAGE_PATH=/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-moge
 export VISION_TOWER=/share/project/zhouenshen/hpfs/ckpt/vlm/paligemma-siglip-so400m-patch14-448
-export DEPTH_TOWER=/share/project/zhouenshen/hpfs/ckpt/vlm/paligemma-siglip-so400m-patch14-448
+export SPATIAL_TOWER=/share/project/zhouenshen/hpfs/ckpt/MoGe/moge-2-vitl-normal
 
 # export DATA_MIXTURE="choice_qa_4M+reason_template_qa_5_9M+sat_176k+ca1m_reasoning_template_qa_3_2M_split+ca1m_choice_qa_2_1M_split+ca1m_visual_choice_qa_341k+refcoco_1_2M+refcocop_1_2M+refcocog_80k+sat_176k+blink_spatial_relation+blink_spatial_relation+blink_spatial_relation+blink_relative_depth+blink_Object_Localization+blink_Multi_view_Reasoning+cv_bench_relation+cv_bench_depth+cv_bench_depth+cv_bench_depth+cv_bench_distance+cv_bench_distance+cv_bench_distance"
 # export DATA_MIXTURE="choice_qa_4M+reason_template_qa_5_9M+sat_176k+ca1m_reasoning_template_qa_3_2M_split+ca1m_choice_qa_2_1M_split+ca1m_visual_choice_qa_341k+refcoco_1_2M+refcocop_1_2M+refcocog_80k+sat_176k+blink_spatial_relation+blink_relative_depth+blink_Object_Localization+blink_Multi_view_Reasoning+blink_all+cv_bench_relation+cv_bench_depth+cv_bench_distance+cv_bench_all+embspatial_127k+ca1m_vacant_qa_121k+ca1m_vacant_qa_121k+simulator_216k+simulator_216k"
@@ -59,17 +59,18 @@ llava/train/train_mem.py \
     --chat_template qwen2 \
     --data_mixture $DATA_MIXTURE \
     --vision_tower $VISION_TOWER \
-    --depth_tower $DEPTH_TOWER \
+    --spatial_tower $SPATIAL_TOWER \
     --mm_vision_select_feature cls_patch \
+    --spatial_tower_vision_select_feature cls_patch \
+    --spatial_tower_vision_num_tokens 3600 \
     --mm_projector mlp_downsample_3x3_fix \
-    --depth_projector mlp_downsample_3x3_fix \
-    --enable_depth True \
-    --use_depth_tower True \
+    --spatial_projector mlp_downsample_3x3_fix \
+    --enable_spatial True \
     --tune_vision_tower False \
     --tune_mm_projector False \
     --tune_language_model False \
-    --tune_depth_tower False \
-    --tune_depth_projector True \
+    --tune_spatial_tower False \
+    --tune_spatial_projector True \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \

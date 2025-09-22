@@ -525,6 +525,7 @@ class LlavaMetaModel(ABC):
 
         # NOTE(Zhouenshen): images.shape: patch_num * 3 * patch_h * patch_w (14 * 3 * 448 * 448)
         if is_spatial and enable_spatial:
+            print(f"spatial image length: {len(images)}; image shape: {images[0].shape}")
             image_features = self.get_spatial_tower()(images)
         else:
             image_features = self.get_vision_tower()(images)    # image_features.shape: patch_num * 1024 * 1152

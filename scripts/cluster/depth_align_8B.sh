@@ -5,7 +5,7 @@ conda activate /share/project/zhouenshen/miniconda3/envs/vila
 export PYTHONPATH=$(pwd)
 export WANDB_MODE=offline
 
-export BASE_RUN_NAME="depth-align-new_placement+new_simulator"
+export BASE_RUN_NAME="depth-align-new_placement+new_simulator-8-nodes"
 export STAGE_PATH=/share/project/zhouenshen/hpfs/ckpt/vlm/NVILA-8B-depth
 export VISION_TOWER=/share/project/zhouenshen/hpfs/ckpt/vlm/paligemma-siglip-so400m-patch14-448
 export DEPTH_TOWER=/share/project/zhouenshen/hpfs/ckpt/vlm/paligemma-siglip-so400m-patch14-448

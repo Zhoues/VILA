@@ -1,20 +1,20 @@
 #!/bin/bash
 
 DEFAULT_RUN_NAME="stage1_9tile"
-DEFAULT_GLOBAL_TRAIN_BATCH_SIZE=16
-DEFAULT_GRADIENT_ACCUMULATION_STEPS=2
+DEFAULT_GLOBAL_TRAIN_BATCH_SIZE=2
+DEFAULT_GRADIENT_ACCUMULATION_STEPS=1
 
-STAGE_PATH=${1:-"/home/zhouenshen/code/VILA/ckpt/pretrain_weights/NVILA-8B-depth"}
+STAGE_PATH=${1:-"/share/project/zhouenshen/hpfs/code/VILA/runs/train/RoboRefer-8B-SFT"}
 # STAGE_PATH=${1:-"/home/zhouenshen/code/VILA/runs/train/NVILA-8B-depth-align/model"}
 # DATA_MIXTURE=${2:-"sat_176k+pixmol_151k"}
 # export DATA_MIXTURE="choice_qa_4M+reason_template_qa_5_9M+ca1m_reasoning_template_qa_3_2M_split+ca1m_choice_qa_2_1M_split"
 
-export DATA_MIXTURE="llava_1_5_lrv_mix_965k+reason_template_qa_5_9M+ca1m_reasoning_template_qa_3_2M_split"
+export DATA_MIXTURE="sat_176k+sat_176k_RGB"
 
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
-OUTPUT_DIR=${3:-"runs/train/NVILA-8B-double-align-${TIMESTAMP}"}
+OUTPUT_DIR=${3:-"runs/train/RoboRefer-8B-human-sft"}
 
 source scripts/setups/train.sh
 
@@ -26,8 +26,8 @@ torchrun \
         --model_name_or_path $STAGE_PATH \
         --chat_template qwen2 \
         --data_mixture $DATA_MIXTURE \
-        --vision_tower /home/zhouenshen/code/VILA/ckpt/pretrain_weights/paligemma-siglip-so400m-patch14-448 \
-        --depth_tower /home/zhouenshen/code/VILA/ckpt/pretrain_weights/paligemma-siglip-so400m-patch14-448 \
+        --vision_tower /share/project/zhouenshen/hpfs/ckpt/vlm/paligemma-siglip-so400m-patch14-448 \
+        --depth_tower /share/project/zhouenshen/hpfs/ckpt/vlm/paligemma-siglip-so400m-patch14-448 \
         --dynamic_s2 True \
         --s2_scales "448,896,1344" \
         --s2_max_split_size 448 \
@@ -40,15 +40,15 @@ torchrun \
         --tune_vision_tower True \
         --tune_mm_projector True \
         --tune_language_model True \
-        --tune_depth_tower True \
-        --tune_depth_projector True \
+        --tune_depth_tower False \
+        --tune_depth_projector False \
         --mm_vision_select_layer -2 \
         --mm_use_im_start_end False \
         --mm_use_im_patch_token False \
         --image_aspect_ratio dynamic_s2 \
         --bf16 True \
         --output_dir $OUTPUT_DIR/model \
-        --num_train_epochs 1 \
+        --num_train_epochs 2 \
         --per_device_train_batch_size $PER_DEVICE_TRAIN_BATCH_SIZE \
         --gradient_accumulation_steps $GRADIENT_ACCUMULATION_STEPS \
         --evaluation_strategy no \

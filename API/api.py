@@ -12,7 +12,7 @@ from termcolor import colored
 
 import llava
 from llava import conversation as clib
-from llava.media import Image, Video, Depth
+from llava.media import Image, Spatial, Video
 from llava.model.configuration_llava import JsonSchemaResponseFormat, ResponseFormat
 
 
@@ -27,29 +27,31 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 ######################## Flask
 
 ######################## Depth Anything
-from Depth_Anything_V2.depth_anything_v2.dpt import DepthAnythingV2
-DEVICE = 'cuda:0' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
-depth_encoder = 'vitl'
-depth_input_size = 518
-model_configs = {
-    'vits': {'encoder': 'vits', 'features': 64, 'out_channels': [48, 96, 192, 384]},
-    'vitb': {'encoder': 'vitb', 'features': 128, 'out_channels': [96, 192, 384, 768]},
-    'vitl': {'encoder': 'vitl', 'features': 256, 'out_channels': [256, 512, 1024, 1024]},
-    'vitg': {'encoder': 'vitg', 'features': 384, 'out_channels': [1536, 1536, 1536, 1536]}
-}
-depth_anything = DepthAnythingV2(**model_configs[depth_encoder])
-depth_anything.load_state_dict(torch.load(
-    f'/share/project/zhouenshen/hpfs/ckpt/depthanything/depth_anything_v2_{depth_encoder}.pth',
-    map_location='cpu'
-))
-depth_anything = depth_anything.to(DEVICE).eval()
+# from Depth_Anything_V2.depth_anything_v2.dpt import DepthAnythingV2
+# DEVICE = 'cuda:7' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
+# depth_encoder = 'vitl'
+# depth_input_size = 518
+# model_configs = {
+#     'vits': {'encoder': 'vits', 'features': 64, 'out_channels': [48, 96, 192, 384]},
+#     'vitb': {'encoder': 'vitb', 'features': 128, 'out_channels': [96, 192, 384, 768]},
+#     'vitl': {'encoder': 'vitl', 'features': 256, 'out_channels': [256, 512, 1024, 1024]},
+#     'vitg': {'encoder': 'vitg', 'features': 384, 'out_channels': [1536, 1536, 1536, 1536]}
+# }
+# depth_anything = DepthAnythingV2(**model_configs[depth_encoder])
+# depth_anything.load_state_dict(torch.load(
+#     f'/share/project/zhouenshen/hpfs/ckpt/depthanything/depth_anything_v2_{depth_encoder}.pth',
+#     map_location='cpu'
+# ))
+# depth_anything = depth_anything.to(DEVICE).eval()
 ########################
 
 ######################## VLM
-vlm_model_path = '/home/zhouenshen/code/VILA/runs/train/NVILA-Lite-2B-depth-sft-2d+3d+sim/model'
-# vlm_model_path = '/home/zhouenshen/code/VILA/runs/train/NVILA-8B-depth-sft-mlp-2d+3d/model'
-# vlm_model_path = '/home/zhouenshen/code/VILA/ckpt/pretrain_weights/NVILA-8B'
-# vlm_model_path = '/home/zhouenshen/code/VILA/ckpt/pretrain_weights/NVILA-Lite-2B'
+# vlm_model_path = '/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-8B-depth-sft-new_placement+new_simulator-8-nodes/model'
+# vlm_model_path = '/share/project/zhouenshen/hpfs/code/VILA/runs/train/RoboRefer-2B-SFT'
+vlm_model_path = '/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-moge-sft-new/model'
+# vlm_model_path = '/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-moge-sft/model/checkpoint-110'
+# vlm_model_path = '/share/project/zhouenshen/hpfs/code/VILA/ckpt/pretrain_weights/NVILA-8B'
+
 vlm_conv_mode = 'auto'
 # 加载模型
 vlm_model = llava.load(vlm_model_path)
@@ -86,31 +88,31 @@ def query():
     data = request.get_json()
 
     image_urls = data.get("image_url", [])
-    depth_urls = data.get("depth_url", [])
-    enable_depth = data.get("enable_depth", 0)
+    # depth_urls = data.get("depth_url", [])
+    enable_spatial = data.get("enable_spatial", 0)
     text = data.get("text", "")
 
     image_files = [decode_base64_to_file(img_b64, prefix="image") for img_b64 in image_urls]
 
     depth_files = []
-    if enable_depth == 1:
-        if len(depth_urls) > 0:
-            assert len(depth_urls) == len(image_urls), "Depth URL数量与Image URL数量不匹配"
-            depth_files = [decode_base64_to_file(dp_b64, prefix="depth") for dp_b64 in depth_urls]
-        else:
-            for img_f in image_files:
-                raw_image = cv2.imread(img_f)
-                depth = depth_anything.infer_image(raw_image, input_size=depth_input_size, device=DEVICE)
+    # if enable_spatial == 1:
+    #     if len(depth_urls) > 0:
+    #         assert len(depth_urls) == len(image_urls), "Depth URL数量与Image URL数量不匹配"
+    #         depth_files = [decode_base64_to_file(dp_b64, prefix="depth") for dp_b64 in depth_urls]
+    #     else:
+    #         for img_f in image_files:
+    #             raw_image = cv2.imread(img_f)
+    #             depth = depth_anything.infer_image(raw_image, input_size=depth_input_size, device=DEVICE)
 
-                # 归一化并转为 8 bit
-                depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
-                depth = depth.astype(np.uint8)
-                depth = np.repeat(depth[..., np.newaxis], 3, axis=-1)
+    #             # 归一化并转为 8 bit
+    #             depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
+    #             depth = depth.astype(np.uint8)
+    #             depth = np.repeat(depth[..., np.newaxis], 3, axis=-1)
 
-                depth_file = f"depth_{uuid.uuid4().hex}.png"
-                cv2.imwrite(depth_file, depth)
-                depth_files.append(depth_file)
-                print(f"Depth file saved to {depth_file}")
+    #             depth_file = f"depth_{uuid.uuid4().hex}.png"
+    #             cv2.imwrite(depth_file, depth)
+    #             depth_files.append(depth_file)
+    #             print(f"Depth file saved to {depth_file}")
 
     prompt = []
     for img_f in image_files:
@@ -122,9 +124,9 @@ def query():
             raise ValueError(f"Unsupported media type: {img_f}")
 
     # 如果需要深度图，则将深度图也放到 prompt
-    if enable_depth == 1 and depth_files:
-        for dp_f in depth_files:
-            prompt.append(Depth(dp_f))
+    if enable_spatial == 1 and image_files:
+        for dp_f in image_files:
+            prompt.append(Spatial(dp_f))
 
     if text:
         prompt.append(text)
@@ -136,8 +138,8 @@ def query():
 
     for img_f in image_files:
         os.remove(img_f)
-    for dp_f in depth_files:
-        os.remove(dp_f)
+    # for dp_f in depth_files:
+    #     os.remove(dp_f)
 
     response = jsonify({'result': 1, 'answer': answer})
 

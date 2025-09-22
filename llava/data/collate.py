@@ -20,7 +20,8 @@ class DataCollator:
 
     def __call__(self, instances: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
         # Gather everything from the batch
-        input_ids, labels, media = [], [], {name: [] for name in self.tokenizer.media_tokens}
+        input_ids, labels, metric_scale_factors, media = [], [], [], {name: [] for name in self.tokenizer.media_tokens}
+
         for instance in instances:
             if isinstance(instance["input_ids"], torch.Tensor):
                 input_ids.append(instance["input_ids"])
@@ -36,6 +37,12 @@ class DataCollator:
                     objs = instance.get(name)
                     objs = objs if objs is not None else []
                     media[name].extend(objs)
+
+            # NOTE(Zhouenshen): Add the metric scale factor to the batch
+            if "metric_scale_factor" in instance and len(instance["metric_scale_factor"]) > 0:
+                metric_scale_factors.append(instance["metric_scale_factor"])
+            else:
+                metric_scale_factors.append(torch.tensor([-1.0]))
 
         batch_size = len(input_ids)
 
@@ -64,6 +71,7 @@ class DataCollator:
         input_ids = input_ids[:, : self.tokenizer.model_max_length]
         labels = labels[:, : self.tokenizer.model_max_length]
         attention_mask = input_ids.ne(self.tokenizer.pad_token_id)
+        metric_scale_factors = torch.stack(metric_scale_factors) if len(metric_scale_factors) > 0 else torch.tensor([-1.0])
 
         # Truncate media objects if necessary
         for name in media:
@@ -93,6 +101,7 @@ class DataCollator:
             "media_config": {"image": {"block_sizes": block_sizes}, "video": {}, "spatial": {"block_sizes": spatial_block_sizes}},
             "labels": labels,
             "attention_mask": attention_mask,
+            "metric_scale_factors": metric_scale_factors,
         }
 
 

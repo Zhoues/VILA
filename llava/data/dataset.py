@@ -1625,6 +1625,11 @@ class LazySupervisedGeometricDataset(Dataset):
             data_dict["image"] = None
             # raise NotImplementedError("SpatialDataset need image")
 
+        if "metric_scale_factor" in self.list_data_dict[i]:
+            data_dict["metric_scale_factor"] = torch.tensor(self.list_data_dict[i]["metric_scale_factor"])
+        else:
+            data_dict["metric_scale_factor"] = torch.tensor([-1.0])
+
         return data_dict
 
 class DataCollatorForSupervisedDatasetSeqParallel:

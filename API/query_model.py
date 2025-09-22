@@ -3,7 +3,11 @@ import base64
 import os
 import time
 import requests
-
+import http.client
+import json
+base_url = "https://cnapi.kksj.org/v1/"
+api_key ='sk-sZlrLladnwVvtgnURsz8LjQJXAFEgTkc7qcDg3mxC3plUcwH'
+openai_client = OpenAI(api_key=api_key, base_url=base_url)
 # Function to encode the image
 def encode_image(image_path):
   with open(image_path, "rb") as image_file:
@@ -70,40 +74,75 @@ def query_api(image_paths, prompt, model_name, retry=100):
     - prompt: String, the prompt.
     """
     
-    base64_images = [encode_image(image_path) for image_path in image_paths]
+    # base64_images = [encode_image(image_path) for image_path in image_paths]
 
+    # for r in range(retry):
+    #     try:
+    #         input_dicts = [{"type": "text", "text": prompt}]
+    #         for i, image in enumerate(base64_images):
+    #             input_dicts.append({"type": "image_url",
+    #                                 "image_url": {"url": f"data:image/jpeg;base64,{image}", "detail": "high"}})
+                
+    #         payload = {
+    #             "model": model_name,
+    #             "messages": [
+    #                 {
+    #                     "role": "user",
+    #                     "content": input_dicts,
+    #                 }
+    #             ],
+    #             "max_tokens": 1024,
+    #             "n": 1,
+    #             "temperature": 0.0,
+    #             "user": "DMXAPI",
+    #         }
+    #         headers = {
+    #             "Content-Type": "application/json",
+    #             "Authorization": f"Bearer {api_key}",
+    #             "User-Agent": "DMXAPI/1.0.0 (https://www.dmxapi.com/)",
+    #         }
+
+    #         response = requests.post(base_url, headers=headers, json=payload)
+    #         print(response.json())
+    #         return response.json()["choices"][0]["message"]["content"]
+    #     except Exception as e:
+    #         print(e)
+    #         time.sleep(1)
+    # return 'Failed: Query Error'
+    conn = http.client.HTTPSConnection("api.kksj.org")
+    base64_images = [encode_image(image_path) for image_path in image_paths]
     for r in range(retry):
         try:
             input_dicts = [{"type": "text", "text": prompt}]
             for i, image in enumerate(base64_images):
-                input_dicts.append({"type": "image_url",
-                                    "image_url": {"url": f"data:image/jpeg;base64,{image}", "detail": "high"}})
-                
-            payload = {
+                 input_dicts.append({"type": "image_url",
+                                     "image_url": {"url": f"data:image/jpeg;base64,{image}", "detail": "high"}})
+            payload = json.dumps({
                 "model": model_name,
                 "messages": [
                     {
                         "role": "user",
                         "content": input_dicts,
+                        
                     }
                 ],
                 "max_tokens": 1024,
                 "n": 1,
                 "temperature": 0.0,
-                "user": "DMXAPI",
-            }
+            })
             headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}",
-                "User-Agent": "DMXAPI/1.0.0 (https://www.dmxapi.com/)",
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
             }
-
-            response = requests.post(base_url, headers=headers, json=payload)
-            print(response.json())
-            return response.json()["choices"][0]["message"]["content"]
+            conn.request("POST", "/v1/chat/completions", payload, headers)
+            res = conn.getresponse()
+            data = res.read()
+            print(data.decode("utf-8"))
+            return json.loads(data.decode("utf-8"))["choices"][0]["message"]["content"]
         except Exception as e:
-            print(e)
-            time.sleep(1)
+             print(e)
+             time.sleep(1)    
     return 'Failed: Query Error'
 
 
@@ -118,7 +157,7 @@ def query_gemini_2_pro(image_paths, prompt, model_name='gemini-2.0-pro-exp-02-05
     response = query_api(image_paths, prompt, model_name, retry)
     return response
 
-def query_gemini_2_5_pro(image_paths, prompt, model_name='gemini-2.5-pro-exp-03-25', retry=100):
+def query_gemini_2_5_pro(image_paths, prompt, model_name='gemini-2.5-pro-thinking', retry=100):
     """
     Query the Gemini 2.5 Pro model with the prompt and a list of image paths.
 
@@ -191,7 +230,7 @@ def query_qwen2_5_vl_72b(image_paths, prompt, model_name='qwen2.5-vl-72b-instruc
     response = query_api(image_paths, prompt, model_name, retry)
     return response
 
-def query_server(image_paths, prompt, url="http://127.0.0.1:25547", enable_depth=0, depth_paths=None, retry=3):
+def query_server(image_paths, prompt, url="http://127.0.0.1:25547", enable_spatial=0, depth_paths=None, retry=3):
     """
     Query the server with the prompt and a list of image paths.
 
@@ -209,23 +248,23 @@ def query_server(image_paths, prompt, url="http://127.0.0.1:25547", enable_depth
     for path in image_paths:
         image_url_list.append(encode_image(path))
 
-    # 2. 处理 depth_path（如果传入）
-    depth_url_list = []
-    if depth_paths is not None:
-        # 如果 depth_path 是单个字符串，可以直接转换
-        if isinstance(depth_paths, str):
-            depth_url_list = [encode_image(depth_paths)]
-        # 如果 depth_path 是多个深度图组成的列表，需要与 image_paths 一一对应
-        elif isinstance(depth_paths, list):
-            depth_url_list = [encode_image(dpth) for dpth in depth_paths]
-        else:
-            raise ValueError("depth_path 参数必须为字符串或字符串列表")
+    # # 2. 处理 depth_path（如果传入）
+    # depth_url_list = []
+    # if depth_paths is not None:
+    #     # 如果 depth_path 是单个字符串，可以直接转换
+    #     if isinstance(depth_paths, str):
+    #         depth_url_list = [encode_image(depth_paths)]
+    #     # 如果 depth_path 是多个深度图组成的列表，需要与 image_paths 一一对应
+    #     elif isinstance(depth_paths, list):
+    #         depth_url_list = [encode_image(dpth) for dpth in depth_paths]
+    #     else:
+    #         raise ValueError("depth_path 参数必须为字符串或字符串列表")
 
     # 3. 构造请求体
     request_data = {
         "image_url": image_url_list,       # base64 编码后的图像列表
-        "depth_url": depth_url_list,       # base64 编码后的深度图列表（可能为空）
-        "enable_depth": enable_depth,      # 是否开启深度图模式
+        # "depth_url": depth_url_list,       # base64 编码后的深度图列表（可能为空）
+        "enable_spatial": enable_spatial,  
         "text": prompt                     # 用户文本
     }
 

@@ -6,8 +6,10 @@ from transformers import Qwen2Config, Qwen2Model, Qwen2ForCausalLM, AutoConfig, 
 from llava.constants import IGNORE_INDEX
 from llava.model.language_model.llava_llama import LlavaLlamaModel
 from llava.model.llava_arch import LlavaMetaForCausalLM, LlavaMetaModel
+from llava.model.loss import metric_scale_factor_loss_function
 from llava.model.multimodal_spatialencoder.MoGe.moge.model.modules import MLP
 from llava.model.multimodal_spatialencoder.MoGe.moge.model.v2 import MoGeModel
+from llava.train.utils import mprint
 
 
 class SpatialQwen2Config(Qwen2Config):
@@ -94,7 +96,7 @@ class SpatialQwen2ForCausalLM(Qwen2ForCausalLM):
         return_dict: Optional[bool] = None,
         cache_position: Optional[torch.LongTensor] = None,
         logits_to_keep: Union[int, torch.Tensor] = 0,
-        input_ids_raw: Optional[torch.LongTensor] = None,
+        metric_scale_factors: Optional[torch.Tensor] = None,
         **kwargs,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
 
@@ -132,56 +134,76 @@ class SpatialQwen2ForCausalLM(Qwen2ForCausalLM):
 
         loss = None
         if labels is not None:
-            # NOTE(Zhouenshen): Cross-Entropy loss for Next Token Prediction
+            # NOTE(Zhouenshen): Cross-Entropy loss for Next Token predion
             cross_entropy_loss = self.loss_function(logits=logits, labels=labels, vocab_size=self.config.vocab_size, **kwargs)
             metric_scale_factor_loss = 0
 
-            # # NOTE(Zhouenshen): Metric Scale Factor loss
-            # # # (batch_size, seq_len, hidden_size) -> (batch_size, seq_len, out_dim) 
-            # # # hidden_size: 1536, out_dim: 1024
+            if metric_scale_factors is not None and len(metric_scale_factors) > 0:
 
-            # hidden_states_for_metric_scale_factor = self.model.metric_scale_factor_projector(hidden_states)
-            # pred_metric_scale_factors_embeddings = []
+                # NOTE(Zhouenshen): Metric Scale Factor loss
+                # # (batch_size, seq_len, hidden_size) -> (batch_size, seq_len, out_dim) 
+                # # hidden_size: 1536, out_dim: 1024
 
-            # # 1. 首先先判断 batch_size 数据中，哪些数据是包含 geo 的，然后使用 geo 的 embedding 进行预测
-            # # labels: (batch_size, seq_len)， 判断哪条数据是包含 geo_token_ids 的，返回一个 bool 值的 tensor，形状为 (batch_size,)
-            # geo_token_mask = (labels == self.config.geo_token_ids).any(dim=1)
+                hidden_states_for_metric_scale_factor = self.model.metric_scale_factor_projector(hidden_states)
+                pred_metric_scale_factors_embeddings = []
 
-            # if len(geo_token_mask) > 0:
-
-
-            #     # 2. 将之前变量进行 shift， (len(geo_token_mask), seq_len - 1, out_dim)
-            #     shift_logits_have_gt = logits[geo_token_mask][:, :-1, :]
-            #     shift_labels_have_gt = labels[geo_token_mask][..., 1:]
-            #     shift_hidden_states_for_metric_scale_factor_have_gt = hidden_states_for_metric_scale_factor[geo_token_mask][:, :-1, :]
+                # 1. 首先先判断 batch_size 数据中，哪些数据是包含 geo 的，然后使用 geo 的 embedding 进行预测
+                # labels: (batch_size, seq_len)， 判断哪条数据是包含 geo_token_ids 的，返回一个 bool 值的 tensor，形状为 (batch_size,)
+                geo_token_mask = (labels == self.config.geo_token_ids).any(dim=1)   # like tensor([False, False, False, False, False], device='cuda:0')
+                geo_num = geo_token_mask.sum().item()
                 
-            #     # 3. 获取 shift_logits_have_gt 中预测所有词的 ID，形状为 (len(geo_token_mask), seq_len - 1)
-            #     shift_vocal_ids_have_gt = torch.argmax(shift_logits_have_gt, dim=-1)
+                if geo_num > 0:
 
-            #     import ipdb; ipdb.set_trace()
+                    # 2. 将之前变量进行 shift， (geo_num, seq_len - 1, out_dim)
+                    shift_logits_have_gt = logits[geo_token_mask][:, :-1, :]
+                    shift_labels_have_gt = labels[geo_token_mask][..., 1:]
+                    shift_hidden_states_for_metric_scale_factor_have_gt = hidden_states_for_metric_scale_factor[geo_token_mask][:, :-1, :]
+                    metric_scale_factors_have_gt = metric_scale_factors[geo_token_mask]
+                    
+                    # 3. 获取 shift_logits_have_gt 中预测所有词的 ID，形状为 (len(geo_token_mask), seq_len - 1)
+                    shift_vocal_ids_have_gt = torch.argmax(shift_logits_have_gt, dim=-1)
 
-            #     # 4. 遍历 shift_vocal_ids_have_gt 中每一个 sample，如果这个 sample 有 geo_token_ids，则将这个 sample 的 embedding 添加到 pred_metric_scale_factors_embeddings 中
-            #     for idx in range(len(shift_vocal_ids_have_gt)):
-            #         # 获取到当前 sample 的所有真实词的 ID
-            #         sample_shift_labels_have_gt = shift_labels_have_gt[idx]
-            #         # 获取第一个非 IGNORE_INDEX 的索引
-            #         non_ignore_idx = torch.where(sample_shift_labels_have_gt != IGNORE_INDEX)[0]
-            #         if len(non_ignore_idx) > 0:
-            #             first_non_ignore_idx = non_ignore_idx[0]
-            #             sample_shift_labels_have_gt = sample_shift_labels_have_gt[first_non_ignore_idx]
-            #         else:
-            #             continue
-            #         # 获取到当前 sample 的所有预测词的 ID
-            #         sample_vocal_ids = shift_vocal_ids_have_gt[idx]
-            #         # 找到数字和 geo_token_ids 一致的索引
-            #         geo_token_idx = torch.where(sample_vocal_ids == self.config.geo_token_ids)[0]
-            #         # 将这个 sample 的 embedding 添加到 pred_metric_scale_factors_embeddings 中
-            #         pred_metric_scale_factors_embeddings.append(shift_hidden_states_for_metric_scale_factor_have_gt[idx][geo_token_idx])
+                    # 4. 遍历 shift_vocal_ids_have_gt 中每一个 sample，如果这个 sample 有 geo_token_ids，则将这个 sample 的 embedding 添加到 pred_metric_scale_factors_embeddings 中
+                    for idx in range(len(shift_vocal_ids_have_gt)):
+                        # 获取到当前 sample 的所有真实词的 ID
+                        sample_shift_labels_have_gt = shift_labels_have_gt[idx]
+                        # 获取第一个非 IGNORE_INDEX 的索引
+                        non_ignore_idx = torch.where(sample_shift_labels_have_gt != IGNORE_INDEX)[0]
+                        if len(non_ignore_idx) > 0:
+                            first_non_ignore_idx = non_ignore_idx[0]
+                        else:
+                            geo_num -= 1
+                            continue
+                        # 获取到当前 sample 的所有预测词的 ID
+                        sample_pred_vocal_ids = shift_vocal_ids_have_gt[idx]
+                        # 屏蔽 label 无效的 token， 只考虑输出部分
+                        sample_pred_vocal_ids[:first_non_ignore_idx] = IGNORE_INDEX
+                        # 找到数字和 geo_token_ids 一致的索引
+                        sample_pred_geo_token_ids = torch.where(sample_pred_vocal_ids == self.config.geo_token_ids)[0]
 
-            #     # 5. 将 pred_metric_scale_factors_embeddings 转换为 tensor，形状为 (len(pred_metric_scale_factors_embeddings), out_dim)
-            #     pred_metric_scale_factors_embeddings = torch.stack(pred_metric_scale_factors_embeddings, dim=0)
+                        if len(sample_pred_geo_token_ids) > 0:
+                            # 取第一个预测的 [GEO]
+                            pred_geo_token_id = sample_pred_geo_token_ids[0]
+                        else:
+                            # 如果没有预测 [GEO]，预测的第一个token为有效 token
+                            pred_geo_token_id = first_non_ignore_idx
 
-            loss = cross_entropy_loss + metric_scale_factor_loss
+                        pred_geo_token_embedding = shift_hidden_states_for_metric_scale_factor_have_gt[idx][pred_geo_token_id]
+                        pred_metric_scale_factors_embeddings.append(pred_geo_token_embedding)
+
+                    # 5. 将 pred_metric_scale_factors_embeddings 转换为 tensor，形状为 (geo_num, out_dim), out_dim: 1024
+                    pred_metric_scale_factors_embeddings = torch.stack(pred_metric_scale_factors_embeddings)
+
+                    # 6. 通过 Decoder 获得对应的 metric scale factor, 形状为 (geo_num, 1)
+                    pred_metric_scale_factors = self.model.metric_scale_factor_decoder(pred_metric_scale_factors_embeddings)
+
+                    # 7. 计算 metric_scale_factor_loss
+                    assert pred_metric_scale_factors.shape == metric_scale_factors_have_gt.shape, "pred_metric_scale_factors and metric_scale_factors must have the same shape"
+                    assert (metric_scale_factors_have_gt > 0).all(), "metric_scale_factors_have_gt must be positive"
+                    metric_scale_factor_loss = metric_scale_factor_loss_function(pred_metric_scale_factors, metric_scale_factors_have_gt)
+                    
+            mprint(f"crossentropy_loss: {cross_entropy_loss.item():.4f}, metric_scale_factor_loss: {metric_scale_factor_loss.item():.4f}")
+            loss = cross_entropy_loss + 0.5 * metric_scale_factor_loss
 
         if not return_dict:
             output = (logits,) + outputs[1:]

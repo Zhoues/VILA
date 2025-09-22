@@ -105,6 +105,7 @@ class LlavaLlamaModel(LlavaMetaModel, LlavaMetaForCausalLM, PreTrainedModel):
         packing: bool = False,  # NOTE(Zhouenshen): packing is set to False for `SpatialQwen2ForCausalLM` for computing the new loss
         seqlens_in_batch: Optional[torch.LongTensor] = None,
         dpo_forward: bool = False,
+        metric_scale_factors: Optional[torch.Tensor] = None,
         **kwargs,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         self.freezed_module_patch()
@@ -136,7 +137,7 @@ class LlavaLlamaModel(LlavaMetaModel, LlavaMetaForCausalLM, PreTrainedModel):
             position_ids=position_ids,
             past_key_values=past_key_values,
             labels=labels,
-            input_ids_raw=input_ids,   # NOTE(Zhouenshen): input_ids is needed for `SpatialQwen2ForCausalLM` for computing the new loss
+            metric_scale_factors=metric_scale_factors,
             **kwargs,
         )
 
