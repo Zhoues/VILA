@@ -13,6 +13,7 @@
 ckpt/
 llava/model/multimodal_encoder/MoGe/*
 data_prepare/*
+wandb/
 
 *.png
 *.jpeg
@@ -25,4 +26,3 @@ data_prepare/*
 *.jpg
 *.ipynb
 *.json
-*.sh
