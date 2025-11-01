@@ -1,23 +1,42 @@
 import json
 
 data_path_list = [
-    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_choice_qa.json",
-    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_qa.json",
-    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_template_qa.json",
-    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_template_qa.json",
-    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_template_qa_split.json",
-    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_reasoning_template_qa_split.json",
-    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_choice_qa_split.json",
-    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_visual_choice_qa.json",
-    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa.json",
 
-    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/metadata_split_10.json",
 
-    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcoco/metadata.json",
-    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocop/metadata.json",
-    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocog/metadata.json",
-    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/metadata.json",
-    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/Pixmo/pixmo_0_10_points_w_counting.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_choice_qa_normalized_1000_spatial_feature.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_template_qa_normalized_1000.json",
+
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_reasoning_template_qa_normalized_1000_split_spatial_feature.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/cubifyanything/ca1m_choice_qa_normalized_1000_split_spatial_feature.json"
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa_normalized_1000_spatial_feature.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_visual_choice_qa_spatial_feature.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_multi_view_qa_spatial_feature.json",
+
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/scannet_reasoning_template_qa_normalized_1000_split.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/scannet_choice_qa_normalized_1000_split.json",
+
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_trajectory_qa_normalized_1000_split_spatial_feature.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/DROID/droid_trajectory_normalized_1000.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/AGIBOT/agibot_trajectory_normalized_1000.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/RoboTwin/robotwin_trajectory_normalized_1000.json",
+        # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/ShareRobot/sharerobot_trajectory_normalized_1000.json",
+
+    "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/scannet_trajectory_qa_normalized_1000_split.json",
+
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/metadata_spatial_feature.json",
+
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/metadata_spatial_feature.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/metadata_spatial_feature.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcoco/metadata_normalized_1000_spatial_feature.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocog/metadata_normalized_1000_spatial_feature.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocop/metadata_normalized_1000_spatial_feature.json",
+
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/llava_v1_5_lrv_mix965k.json",
+
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/BLINK/metadata_Spatial_Relation_spatial_feature.json",
+    # "/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/metadata_random_90_spatial_feature.json",
+
+
 ]
 
 # 全局统计变量
@@ -49,11 +68,11 @@ for file_path in data_path_list:
 
         # 输出每个文件的统计信息
         print(f"\n📂 文件名: {file_path}")
-        print(f"    ✅ 总共有 {total_metadata} 条 metadata")
-        print(f"    💬 总共有 {total_qa} 个 QA 对")
-        print(f"    📊 每条 metadata 平均有 {average_qa:.2f} 个 QA 对")
-        print(f"    🔺 最多 QA 数量: {max_qa}")
-        print(f"    🔻 最少 QA 数量: {min_qa}")
+        print(f"✅ 总共有 {total_metadata} 条 metadata")
+        print(f"💬 总共有 {total_qa} 个 QA 对")
+        print(f"📊 每条 metadata 平均有 {average_qa:.2f} 个 QA 对")
+        print(f"🔺 最多 QA 数量: {max_qa}")
+        print(f"🔻 最少 QA 数量: {min_qa}")
 
     except Exception as e:
         print(f"\n❌ 处理文件失败: {file_path}")

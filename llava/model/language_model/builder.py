@@ -81,9 +81,9 @@ def build_llm_and_tokenizer(
     llm_cfg._attn_implementation = attn_implementation
     llm_cfg.model_max_length = model_max_length
 
-    # NOTE(Zhouenshen): Add spatial tower weights path to the LLM config to load spatial tower (e.g., MoGe-2) weights
-    if hasattr(config, "spatial_tower_weights_path") and not hasattr(llm_cfg, "spatial_tower_weights_path"):
-        llm_cfg.spatial_tower_weights_path = config.spatial_tower_weights_path
+    # NOTE(Zhouenshen): Add spatial tower weights path to the LLM config to load spatial tower (e.g., MapAnything) weights
+    if hasattr(config, "spatial_tower") and not hasattr(llm_cfg, "spatial_tower"):
+        llm_cfg.spatial_tower = config.spatial_tower
 
     if model_max_length is not None:
         context_length_extension(llm_cfg)

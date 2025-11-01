@@ -93,8 +93,6 @@ def prepare_config_for_training(
         config.mm_projector_cfg = model_args.mm_projector
     
     # NOTE(Zhouenshen): Add spatial tower and projector configuration
-    if getattr(config, "spatial_tower_cfg", None) is None:
-        config.spatial_tower_cfg = model_args.spatial_tower
     if getattr(config, "spatial_projector_cfg", None) is None:
         config.spatial_projector_cfg = model_args.spatial_projector
 
@@ -109,8 +107,7 @@ def prepare_config_for_training(
     config.tune_vision_tower = training_args.tune_vision_tower
     config.tune_mm_projector = training_args.tune_mm_projector
 
-    # NOTE(Zhouenshen): Add spatial tower and projector training
-    config.tune_spatial_tower = training_args.tune_spatial_tower
+    # NOTE(Zhouenshen): Add spatial projector training
     config.tune_spatial_projector = training_args.tune_spatial_projector
 
     # set data args

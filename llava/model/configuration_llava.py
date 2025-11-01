@@ -31,7 +31,6 @@ class LlavaConfig(PretrainedConfig):
 
         # NOTE(Zhouenshen): Add spatial tower and projector configuration in llava config and whether to use spatial tower to process the image
         enable_spatial=None,
-        spatial_tower_cfg=None,
         spatial_projector_cfg=None,
 
         architectures=None,
@@ -83,7 +82,6 @@ class LlavaConfig(PretrainedConfig):
 
         # NOTE(Zhouenshen): Add depth configuration in llava config
         self.enable_spatial = enable_spatial
-        self.spatial_tower_cfg = spatial_tower_cfg
         self.spatial_projector_cfg = spatial_projector_cfg
 
         self.hidden_size = hidden_size

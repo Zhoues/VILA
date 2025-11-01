@@ -1,10 +1,10 @@
 #!/bin/bash
 
-DEFAULT_RUN_NAME="mapanything-scannet-geo-sft-small-text"
-DEFAULT_GLOBAL_TRAIN_BATCH_SIZE=48
+DEFAULT_RUN_NAME="mapanything-scannet-geo-align-small-text"
+DEFAULT_GLOBAL_TRAIN_BATCH_SIZE=56
 DEFAULT_GRADIENT_ACCUMULATION_STEPS=1
 
-STAGE_PATH=${1:-"/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-MapAnything-scannet-geo-align-small-text/model"}
+STAGE_PATH=${1:-"/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-MapAnything"}
 # STAGE_PATH=${1:-"/home/zhouenshen/code/VILA/runs/train/NVILA-8B-depth-align/model"}
 # DATA_MIXTURE=${2:-"sat_176k+pixmol_151k"}
 # export DATA_MIXTURE="choice_qa_4M+reason_template_qa_5_9M+ca1m_reasoning_template_qa_3_2M_split+ca1m_choice_qa_2_1M_split"
@@ -15,20 +15,19 @@ STAGE_PATH=${1:-"/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-
 
 # export DATA_MIXTURE="sat_176k+sat_176k_RGB"
 # export DATA_MIXTURE="ca1m_vacant_qa_231k+ca1m_vacant_qa_231k_RGB"
-# export DATA_MIXTURE="DROID_w_image+DROID_w_image_RGB+DROID_w_image_intrinsics+DROID_w_image_intrinsics_and_depth+ShareRobot_w_image+ShareRobot_w_image_RGB"
-# export DATA_MIXTURE="DROID_w_image+DROID_w_image_RGB+DROID_w_image_intrinsics+DROID_w_image_intrinsics_and_depth"
+# export DATA_MIXTURE="DROID_w_image+DROID_w_image_intrinsics+DROID_w_image_intrinsics_and_depth+ShareRobot_w_image"
+# export DATA_MIXTURE="DROID_w_image+DROID_w_image_intrinsics+DROID_w_image_intrinsics_and_depth"
 
-# export DATA_MIXTURE="ScanNet_w_image_no_distance_RGB+ScanNet_w_image_no_distance+ScanNet_w_image_intrinsics_no_distance+ScanNet_w_image_intrinsics_and_depth_no_distance+ScanNet_w_image_only_distance_RGB+ScanNet_w_image_only_distance+ScanNet_w_image_intrinsics_only_distance+ScanNet_w_image_intrinsics_and_depth_only_distance"
-export DATA_MIXTURE="ScanNet_w_image+ScanNet_w_image_RGB+ScanNet_w_image_intrinsics+ScanNet_w_image_intrinsics_and_depth"
-# export DATA_MIXTURE="ca1m_reasoning_template_qa_3_2M_split_RGB+ca1m_reasoning_template_qa_3_2M_split+ca1m_reasoning_template_qa_3_2M_split_w_intrinsics+ca1m_reasoning_template_qa_3_2M_split_w_intrinsics_and_depth"
-# export DATA_MIXTURE="ScanNet_w_image_RGB+ScanNet_w_image+ScanNet_w_image_intrinsics+ScanNet_w_image_intrinsics_and_depth+ca1m_template_qa_split_RGB+ca1m_template_qa_split+ca1m_template_qa_split_w_intrinsics+ca1m_template_qa_split_w_intrinsics_and_depth"
+# export DATA_MIXTURE="ScanNet_w_image_no_distance+ScanNet_w_image_intrinsics_no_distance+ScanNet_w_image_intrinsics_and_depth_no_distance+ScanNet_w_image_only_distance+ScanNet_w_image_intrinsics_only_distance+ScanNet_w_image_intrinsics_and_depth_only_distance"
+# export DATA_MIXTURE="ScanNet_w_image+ScanNet_w_image_intrinsics+ScanNet_w_image_intrinsics_and_depth+ca1m_template_qa_split+ca1m_template_qa_split_w_intrinsics+ca1m_template_qa_split_w_intrinsics_and_depth"
+export DATA_MIXTURE="ScanNet_w_image+ScanNet_w_image_intrinsics+ScanNet_w_image_intrinsics_and_depth"
 
 
 export WANDB_MODE=offline
-s
+
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
-OUTPUT_DIR=${3:-"runs/train/NVILA-Lite-2B-MapAnything-scannet-geo-sft-small-text"}
+OUTPUT_DIR=${3:-"runs/train/NVILA-Lite-2B-MapAnything-scannet-geo-align-small-text"}
 
 source scripts/setups/train.sh
 
@@ -48,9 +47,9 @@ torchrun \
         --mm_projector mlp_downsample_3x3_fix \
         --spatial_projector mlp_downsample_3x3_fix \
         --enable_spatial True \
-        --tune_vision_tower True \
-        --tune_mm_projector True \
-        --tune_language_model True \
+        --tune_vision_tower False \
+        --tune_mm_projector False \
+        --tune_language_model False \
         --tune_spatial_projector True \
         --mm_vision_select_layer -2 \
         --mm_use_im_start_end False \
@@ -63,9 +62,9 @@ torchrun \
         --gradient_accumulation_steps $GRADIENT_ACCUMULATION_STEPS \
         --evaluation_strategy no \
         --save_strategy steps \
-        --save_steps 1000 \
+        --save_steps 2000 \
         --save_total_limit 1 \
-        --learning_rate 2e-5 \
+        --learning_rate 1e-3 \
         --weight_decay 0. \
         --warmup_ratio 0.03 \
         --lr_scheduler_type cosine \

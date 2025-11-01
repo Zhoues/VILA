@@ -211,8 +211,8 @@ def build_dataset_legacy(
     # NOTE(Zhouenshen): Add the depth path for spatialdataset
     data_args.depth_path = getattr(dataset, "depth_path", None)
 
-    # NOTE(Zhouenshen): Add the spatial path for spatialdataset
-    data_args.enable_spatial = getattr(dataset, "enable_spatial", False)
+    # NOTE(Zhouenshen): Add the spatial feature path for geometricdataset
+    data_args.spatial_feature_path = getattr(dataset, "spatial_feature_path", None)
 
     data_args.caption_choice = getattr(dataset, "caption_choice", None)
     data_args.caption_choice_2 = getattr(dataset, "caption_choice_2", None)

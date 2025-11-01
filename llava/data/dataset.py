@@ -39,11 +39,9 @@ from llava import conversation as conversation_lib
 from llava.constants import DEFAULT_SPATIAL_TOKEN, DEFAULT_IMAGE_TOKEN, IGNORE_INDEX
 from llava.data.collate import DataCollator
 from llava.mm_utils import (
-    dynamic_process_images_and_prompt_for_spatial_encoder,
     dynamic_process_images_and_prompt,
     dynamic_process_depths_and_prompt,
     dynamic_s2_process_depths_and_prompt,
-    dynamic_s2_process_images_and_prompt_for_spatial_encoder,
     dynamic_s2_process_images_and_prompt,
     opencv_extract_frames,
     process_depth,
@@ -143,6 +141,12 @@ def preprocess_rgbx(sources: Sequence[str], image_num: int, enable_new_modality:
     for source in sources:
         for sid, sentence in enumerate(source):
             text = sentence.get("value", "")
+            if not isinstance(text, str):
+                text = str(text)  # 或者你可以选择跳过或抛出异常
+                print(f"Warning: sentence['value'] is not a string: {type(text)} -> {text}")
+                print(f"sources: {sources}")
+                print(f"sentence: {sentence}")
+
             # 1. 清除所有 token
             text = pattern.sub("", text)
             # 2. 去除首尾的换行符（以及其他空白字符）
@@ -1511,8 +1515,13 @@ class LazySupervisedGeometricDataset(Dataset):
         self.data_args = data_args
         self.image_folder = image_folder
 
-        # NOTE(Zhouenshen): Add boolean flag to check if spatial encoding is enabled.
-        self.enable_spatial = self.data_args.enable_spatial
+        # NOTE(Zhouenshen): Add boolean flag to check if spatial feature is enabled. If available, we will use spatial feature.
+        if self.data_args.spatial_feature_path is not None:
+            self.enable_spatial = True
+            self.spatial_feature_folder = data_args.spatial_feature_path
+        else:
+            self.enable_spatial = False
+            self.spatial_feature_folder = None
         
     def __len__(self):
         return len(self.list_data_dict)
@@ -1550,6 +1559,23 @@ class LazySupervisedGeometricDataset(Dataset):
             
             image_file = self.list_data_dict[i]["image"]
 
+            if self.enable_spatial:
+                all_spatial_features = []
+                spatial_feature_files = self.list_data_dict[i]["spatial_feature"]
+
+                for fname in spatial_feature_files:
+                    data = np.load(os.path.join(self.spatial_feature_folder, fname))
+                    spatial = data["spatial_feature"]           # (1, hidden, base_h * base_w)
+                    scale = data["scale_token"]                 # (1, hidden, 1)
+                    metric_scaling_factor = data["metric_scaling_factor"]      # (1, 1)
+
+                    concat = np.concatenate([spatial, scale], axis=-1)  # (1, hidden, base_h * base_w + 1)
+                    all_spatial_features.append(concat)
+
+                if all_spatial_features:
+                    concat_spatial_feature_np = np.concatenate(all_spatial_features, axis=0)  # (B, hidden, base_h * base_w + 1)
+                    concat_spatial_feature = torch.tensor(concat_spatial_feature_np)  # (B, hidden, base_h * base_w + 1)
+
             # process conversations
             if enable_dynamic_res_s2 or enable_dynamic_res:
                 if isinstance(image_file, list):
@@ -1565,8 +1591,6 @@ class LazySupervisedGeometricDataset(Dataset):
                 #         processed_depths, depth_block_sizes = dynamic_s2_process_images_and_prompt_for_spatial_encoder(image_file, sources[0][0]["value"], self.data_args, self.image_folder)
                 if enable_dynamic_res:
                     processed_images, sources[0][0]["value"] = dynamic_process_images_and_prompt(image_file, sources[0][0]["value"], self.data_args, self.image_folder)
-                    if self.enable_spatial:
-                        processed_images_for_spatial_encoder, sources[0][0]["value"] = dynamic_process_images_and_prompt_for_spatial_encoder(image_file, sources[0][0]["value"], self.data_args, self.image_folder)
                 # else:
                 #     processed_images = torch.stack([process_image(img, self.data_args, self.image_folder) for img in image_file])
                 #     if self.enable_spatial:
@@ -1578,8 +1602,6 @@ class LazySupervisedGeometricDataset(Dataset):
                 #         processed_depths, depth_block_sizes = dynamic_s2_process_images_and_prompt_for_spatial_encoder([image_file], sources[0][0]["value"], self.data_args, self.image_folder)
                 if enable_dynamic_res:
                     processed_images, sources[0][0]["value"] = dynamic_process_images_and_prompt([image_file], sources[0][0]["value"], self.data_args, self.image_folder)
-                    if self.enable_spatial:
-                        processed_images_for_spatial_encoder, sources[0][0]["value"] = dynamic_process_images_and_prompt_for_spatial_encoder([image_file], sources[0][0]["value"], self.data_args, self.image_folder)
                 # else:
                 #     processed_images = process_image(image_file, self.data_args, self.image_folder)
                 #     if self.enable_spatial:
@@ -1606,12 +1628,11 @@ class LazySupervisedGeometricDataset(Dataset):
         if "image" in self.list_data_dict[i]:
             if processed_images is None or len(processed_images.shape) == 4:
                 data_dict["image"] = processed_images
-                if self.enable_spatial:
-                    data_dict['spatial'] = processed_images_for_spatial_encoder
             else:
                 data_dict["image"] = processed_images.unsqueeze(0)
-                if self.enable_spatial:
-                    data_dict['spatial'] = processed_images_for_spatial_encoder.unsqueeze(0)
+
+            if self.enable_spatial:
+                data_dict['spatial'] = concat_spatial_feature  # (B, hidden_size, base_h * base_w + 1)
             # if enable_dynamic_res_s2:
             #     data_dict["block_sizes"] = block_sizes
             #     if self.enable_spatial:
@@ -1625,8 +1646,9 @@ class LazySupervisedGeometricDataset(Dataset):
             data_dict["image"] = None
             # raise NotImplementedError("SpatialDataset need image")
 
-        if "metric_scale_factor" in self.list_data_dict[i]:
-            data_dict["metric_scale_factor"] = torch.tensor(self.list_data_dict[i]["metric_scale_factor"])
+
+        if self.enable_spatial:
+            data_dict["metric_scale_factor"] = torch.tensor(metric_scaling_factor[0])
         else:
             data_dict["metric_scale_factor"] = torch.tensor([-1.0])
 

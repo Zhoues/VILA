@@ -230,7 +230,7 @@ def query_qwen2_5_vl_72b(image_paths, prompt, model_name='qwen2.5-vl-72b-instruc
     response = query_api(image_paths, prompt, model_name, retry)
     return response
 
-def query_server(image_paths, prompt, url="http://127.0.0.1:25547", enable_spatial=0, depth_paths=None, retry=3):
+def query_server(image_paths, prompt, url="http://127.0.0.1:25547", enable_spatial=0, intrinsics=None, depth_z_paths=None, retry=3):
     """
     Query the server with the prompt and a list of image paths.
 
@@ -238,37 +238,22 @@ def query_server(image_paths, prompt, url="http://127.0.0.1:25547", enable_spati
     - image_paths: List of Strings, the path to the images.
     - prompt: String, the prompt.
     - url: String, the url of the server.
-    - depth_path: String, the path to the depth image.
-    - enable_depth: Integer, 0 or 1, whether to enable depth.
+    - intrinsics: List of Arrays, the intrinsics matrix.
+    - depth_z_paths: List of Strings, the path to the depth image.
+    - enable_spatial: Integer, 0 or 1, whether to enable spatial.
     - retry: Integer, the number of retries.
     """
 
-    # 1. 将 image_paths 转为 base64
-    image_url_list = []
-    for path in image_paths:
-        image_url_list.append(encode_image(path))
-
-    # # 2. 处理 depth_path（如果传入）
-    # depth_url_list = []
-    # if depth_paths is not None:
-    #     # 如果 depth_path 是单个字符串，可以直接转换
-    #     if isinstance(depth_paths, str):
-    #         depth_url_list = [encode_image(depth_paths)]
-    #     # 如果 depth_path 是多个深度图组成的列表，需要与 image_paths 一一对应
-    #     elif isinstance(depth_paths, list):
-    #         depth_url_list = [encode_image(dpth) for dpth in depth_paths]
-    #     else:
-    #         raise ValueError("depth_path 参数必须为字符串或字符串列表")
-
-    # 3. 构造请求体
+    # 1. 构造请求体
     request_data = {
-        "image_url": image_url_list,       # base64 编码后的图像列表
-        # "depth_url": depth_url_list,       # base64 编码后的深度图列表（可能为空）
+        "image_paths": image_paths,
+        "depth_z_paths": depth_z_paths,
+        "intrinsics": intrinsics,
         "enable_spatial": enable_spatial,  
-        "text": prompt                     # 用户文本
+        "text": prompt
     }
 
-    # 4. 进行 HTTP 请求，并支持一定次数的重试
+    # 2. 进行 HTTP 请求，并支持一定次数的重试
     for attempt in range(1, retry + 1):
         try:
             response = requests.post(url + "/query", json=request_data)

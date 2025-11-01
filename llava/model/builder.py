@@ -155,10 +155,6 @@ def load_pretrained_model(
         mm_projector = model.get_mm_projector()
         mm_projector.to(device=device, dtype=torch.float16)
         # mm_projector.to(device=device, dtype=torch.bfloat16)
-
-        if model.get_spatial_tower() is not None:
-            spatial_tower = model.get_spatial_tower()
-            spatial_tower.to(device=device, dtype=torch.float16)
         
         if model.get_spatial_projector() is not None:
             spatial_projector = model.get_spatial_projector()

@@ -39,10 +39,10 @@ def build_mm_projector(model_type_or_path: str, config: PretrainedConfig) -> Pre
             print(f"Building mm projector from scratch!")
 
             if "spatial_projector" in model_type_or_path:
-                # NOTE(Zhouenshen): Build spatial projector from scratch for MoGe2
+                # NOTE(Zhouenshen): Build spatial projector from scratch for MapAnything
                 new_projector_type = config.spatial_projector_cfg.get("mm_projector_type", "mlp_downsample_3x3_fix")
-                new_projector_use_cls_token = config.spatial_projector_cfg.get("spatial_tower_vision_select_feature", "cls_patch")
-                new_projector_num_tokens = config.spatial_projector_cfg.get("spatial_tower_vision_num_tokens", 3600)
+                new_projector_use_cls_token = config.spatial_projector_cfg.get("spatial_tower_vision_select_feature", "scale_token_patch")
+                new_projector_num_tokens = config.spatial_projector_cfg.get("spatial_tower_vision_num_tokens", 1369)
             else:
                 raise ValueError(f"Unknown projector: {model_type_or_path}")
             

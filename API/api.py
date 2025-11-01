@@ -6,7 +6,7 @@ import base64
 import uuid
 import cv2
 import numpy as np
-
+import imageio
 from pydantic import BaseModel
 from termcolor import colored
 
@@ -26,30 +26,24 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 ######################## Flask
 
-######################## Depth Anything
-# from Depth_Anything_V2.depth_anything_v2.dpt import DepthAnythingV2
+######################## MapAnything
+from llava.model.multimodal_spatialencoder.mapanything.mapanything.models.mapanything import MapAnything
+from llava.model.multimodal_spatialencoder.mapanything.mapanything.utils.image import preprocess_inputs
 # DEVICE = 'cuda:7' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
-# depth_encoder = 'vitl'
-# depth_input_size = 518
-# model_configs = {
-#     'vits': {'encoder': 'vits', 'features': 64, 'out_channels': [48, 96, 192, 384]},
-#     'vitb': {'encoder': 'vitb', 'features': 128, 'out_channels': [96, 192, 384, 768]},
-#     'vitl': {'encoder': 'vitl', 'features': 256, 'out_channels': [256, 512, 1024, 1024]},
-#     'vitg': {'encoder': 'vitg', 'features': 384, 'out_channels': [1536, 1536, 1536, 1536]}
-# }
-# depth_anything = DepthAnythingV2(**model_configs[depth_encoder])
-# depth_anything.load_state_dict(torch.load(
-#     f'/share/project/zhouenshen/hpfs/ckpt/depthanything/depth_anything_v2_{depth_encoder}.pth',
-#     map_location='cpu'
-# ))
-# depth_anything = depth_anything.to(DEVICE).eval()
-########################
+device = "cuda" if torch.cuda.is_available() else "cpu"
+mapanything_model_path = '/share/project/zhouenshen/hpfs/ckpt/mapanything/map-anything'
+mapanything_model = MapAnything.from_pretrained(mapanything_model_path)
+# mapanything_model = mapanything_model.to(torch.device(DEVICE)).eval()
+mapanything_model = mapanything_model.to(device).eval()
+######################## MapAnything
 
 ######################## VLM
 # vlm_model_path = '/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-8B-depth-sft-new_placement+new_simulator-8-nodes/model'
-# vlm_model_path = '/share/project/zhouenshen/hpfs/code/VILA/runs/train/RoboRefer-2B-SFT'
-vlm_model_path = '/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-moge-sft-new/model'
-# vlm_model_path = '/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-moge-sft/model/checkpoint-110'
+# vlm_model_path = '/share/project/zhouenshen/hpfs/code/VILA/runs/train/RoboRefer-8B-SFT'
+# vlm_model_path = '/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-MapAnything-geo-sft/model'
+# vlm_model_path = '/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-8B-MapAnything-scannet-geo-sft-small/model'
+# vlm_model_path = '/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-MapAnything-partial-geo-sft/model'
+vlm_model_path = '/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-MapAnything-sft-v2/model' # ajk 10/20 modify to test full data for msmu
 # vlm_model_path = '/share/project/zhouenshen/hpfs/code/VILA/ckpt/pretrain_weights/NVILA-8B'
 
 vlm_conv_mode = 'auto'
@@ -79,43 +73,23 @@ def query():
     该接口接受 JSON 数据，数据示例:
     {
         "image_url": [...],   # base64 字符串列表
-        "depth_url": [...],   # base64 字符串列表, 可选
-        "enable_depth": 0/1,  # 0 表示不需要深度图, 1 表示需要深度图
+        "intrinsics": [...],  # 内参矩阵列表 (3, 3)
+        "depth_z": [...],  # 深度图列表 (H, W)
+        "enable_spatial": 0/1,  # 0 表示不需要空间信息, 1 表示需要空间信息
         "text": ""            # 文本字符串，表示问题或提示
     }
     """
 
     data = request.get_json()
 
-    image_urls = data.get("image_url", [])
-    # depth_urls = data.get("depth_url", [])
+    image_paths = data.get("image_paths", [])
+    depth_z_paths = data.get("depth_z_paths", None)
+    intrinsics = data.get("intrinsics", None)
     enable_spatial = data.get("enable_spatial", 0)
     text = data.get("text", "")
 
-    image_files = [decode_base64_to_file(img_b64, prefix="image") for img_b64 in image_urls]
-
-    depth_files = []
-    # if enable_spatial == 1:
-    #     if len(depth_urls) > 0:
-    #         assert len(depth_urls) == len(image_urls), "Depth URL数量与Image URL数量不匹配"
-    #         depth_files = [decode_base64_to_file(dp_b64, prefix="depth") for dp_b64 in depth_urls]
-    #     else:
-    #         for img_f in image_files:
-    #             raw_image = cv2.imread(img_f)
-    #             depth = depth_anything.infer_image(raw_image, input_size=depth_input_size, device=DEVICE)
-
-    #             # 归一化并转为 8 bit
-    #             depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
-    #             depth = depth.astype(np.uint8)
-    #             depth = np.repeat(depth[..., np.newaxis], 3, axis=-1)
-
-    #             depth_file = f"depth_{uuid.uuid4().hex}.png"
-    #             cv2.imwrite(depth_file, depth)
-    #             depth_files.append(depth_file)
-    #             print(f"Depth file saved to {depth_file}")
-
     prompt = []
-    for img_f in image_files:
+    for img_f in image_paths:
         if any(img_f.endswith(ext) for ext in [".jpg", ".jpeg", ".png"]):
             prompt.append(Image(img_f))
         elif any(img_f.endswith(ext) for ext in [".mp4", ".mkv", ".webm"]):
@@ -123,10 +97,56 @@ def query():
         else:
             raise ValueError(f"Unsupported media type: {img_f}")
 
-    # 如果需要深度图，则将深度图也放到 prompt
-    if enable_spatial == 1 and image_files:
-        for dp_f in image_files:
-            prompt.append(Spatial(dp_f))
+    if enable_spatial == 1 and (depth_z_paths is not None or intrinsics is not None):
+        if depth_z_paths is not None:
+            assert len(depth_z_paths) == len(image_paths), "Depth z paths length must be equal to image paths length"
+
+        image_list = []
+        for image_path in image_paths:
+            image = imageio.v2.imread(image_path)
+            image_list.append(image)
+        
+        if depth_z_paths is not None:
+            depth_z_list = []
+            for depth_z_path in depth_z_paths:
+                depth_z = imageio.v2.imread(depth_z_path).astype(np.float32) if os.path.exists(depth_z_path) else None
+                depth_z_list.append(depth_z)
+        
+        if intrinsics is not None:
+            intrinsics = np.array(intrinsics)
+
+        views = []
+        for idx, image in enumerate(image_list):
+            view = {
+                "img": image,
+                "is_metric_scale": torch.tensor([True]),
+            }
+            if intrinsics is not None:
+                view["intrinsics"] = torch.tensor(intrinsics, dtype=torch.float32)
+            if depth_z_list is not None:
+                view["depth_z"] = torch.tensor(depth_z_list[idx], dtype=torch.float32)
+            views.append(view)
+
+        views = preprocess_inputs(views, resize_mode="square", size=518)
+
+        predictions = mapanything_model.infer(
+            views,
+            memory_efficient_inference=False,
+            use_amp=True,
+            amp_dtype="bf16",
+            apply_mask=True,
+            mask_edges=True,
+            apply_confidence_mask=False,
+            confidence_percentile=10,
+        )
+
+
+        for prediction in predictions:
+            spatial = prediction["spatial_features"] # (1, hidden, base_h * base_w + 1)
+            scale = prediction["scale_token"] # (1, hidden, 1)
+            concat = torch.cat([spatial, scale], dim=-1) # (1, hidden, base_h * base_w + 1)
+            prompt.append(Spatial(spatial_feature=concat))
+    
 
     if text:
         prompt.append(text)
@@ -135,9 +155,8 @@ def query():
 
     print(colored(answer, "cyan", attrs=["bold"]))
 
-
-    for img_f in image_files:
-        os.remove(img_f)
+    # for img_f in image_files:
+    #     os.remove(img_f)
     # for dp_f in depth_files:
     #     os.remove(dp_f)
 

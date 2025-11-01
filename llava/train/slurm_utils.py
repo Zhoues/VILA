@@ -82,7 +82,7 @@ def rank_print(*s):
 
 
 class TimeoutTerminateCallback(transformers.TrainerCallback):
-    def __init__(self, total_time_limit=240, pre_terminate_time=10):
+    def __init__(self, total_time_limit=70, pre_terminate_time=10):
         self.total_time_limit = total_time_limit
         self.pre_terminate_time = pre_terminate_time
         elapsed_time = timer.get_elapsed_time()

@@ -32,12 +32,11 @@ from transformers import AutoConfig, GenerationConfig, LogitsProcessor
 from transformers.modeling_utils import ContextManagers, no_init_weights
 
 from llava.constants import DEFAULT_GEO_TOKEN, DEFAULT_SPATIAL_TOKEN, DEFAULT_IMAGE_TOKEN, IGNORE_INDEX, NUM_EXTRA_TOKENS
-from llava.mm_utils import dynamic_process_depths_and_prompt, dynamic_process_images_and_prompt, dynamic_s2_process_depths_and_prompt, dynamic_s2_process_images_and_prompt, dynamic_process_images_and_prompt_for_spatial_encoder, process_depth, process_image, process_images, process_rgbd_inference_conversation
+from llava.mm_utils import dynamic_process_depths_and_prompt, dynamic_process_images_and_prompt, dynamic_s2_process_depths_and_prompt, dynamic_s2_process_images_and_prompt, process_depth, process_image, process_images, process_rgbx_inference_conversation
 from llava.model.configuration_llava import LlavaConfig, ResponseFormat
 from llava.model.language_model.builder import build_llm_and_tokenizer
 from llava.model.multimodal_encoder.builder import build_vision_tower
 from llava.model.multimodal_projector.builder import build_mm_projector
-from llava.model.multimodal_spatialencoder.build import build_spatial_tower
 from llava.model.utils import get_model_config
 from llava.train.sequence_parallel import get_pg_manager
 from llava.train.utils import mprint
@@ -48,8 +47,9 @@ from llava.utils.tokenizer import tokenize_conversation
 
 class LlavaMetaModel(ABC):
     def init_vlm(self, config, *args, **kwargs):
+
         # TODO(ligeng): figure out how from_config and from_pretrained works in HF implementation.
-        if hasattr(self, "llm") or hasattr(self, "vision_tower") or hasattr(self, "mm_projector") or hasattr(self, "spatial_tower") or hasattr(self, "spatial_projector"):
+        if hasattr(self, "llm") or hasattr(self, "vision_tower") or hasattr(self, "mm_projector") or hasattr(self, "spatial_projector"):
             # already initialized, skipped
             return
 
@@ -61,20 +61,13 @@ class LlavaMetaModel(ABC):
         cfgs = get_model_config(config)
 
         # NOTE(Zhouenshen): Add metric scale factor projector configuration
-        if len(cfgs) == 5:
-            llm_cfg, vision_tower_cfg, mm_projector_cfg, spatial_tower_cfg, spatial_projector_cfg = cfgs
-        elif len(cfgs) == 4:
+        if len(cfgs) == 4:
             llm_cfg, vision_tower_cfg, mm_projector_cfg, spatial_projector_cfg = cfgs
-            spatial_tower_cfg = None
         elif len(cfgs) == 3:
             llm_cfg, vision_tower_cfg, mm_projector_cfg = cfgs
-            spatial_tower_cfg, spatial_projector_cfg = None, None
+            spatial_projector_cfg = None
         else:
-            raise ValueError("`llm_cfg` `mm_projector_cfg` `vision_tower_cfg` `spatial_tower_cfg` `spatial_projector_cfg` not found in the config.")
-
-        # NOTE(Zhouenshen): Add spatial tower weights path to the LLM config to load spatial tower (e.g., MoGe-2) weights
-        if spatial_tower_cfg is not None:
-            config.spatial_tower_weights_path = spatial_tower_cfg + "/model.pt"
+            raise ValueError("`llm_cfg` `mm_projector_cfg` `vision_tower_cfg` `spatial_projector_cfg` not found in the config.")
 
         # print("Before init in Config")
         # if hasattr(config, "deepspeed") and "mics" in config.deepspeed:
@@ -100,15 +93,9 @@ class LlavaMetaModel(ABC):
         # NOTE(Zhouenshen): Load spatial tower and projector ckpt if provided
         if hasattr(config, "enable_spatial") and config.enable_spatial:
             # NOTE(Zhouenshen): Build spatial tower before building spatial projector and metric scale factor projector to update the config
-            self.spatial_tower = build_spatial_tower(spatial_tower_cfg, config)
             self.spatial_projector = build_mm_projector(spatial_projector_cfg, config)
         else:
-            self.spatial_tower = None
             self.spatial_projector = None
-
-        # NOTE(Zhouenshen): tune_spatial_tower must be set True if enable_spatial is True
-        if hasattr(config, "tune_spatial_tower") and config.tune_spatial_tower:
-            assert hasattr(config, "enable_spatial") and config.enable_spatial, "tune_spatial_tower must be set if enable_spatial is True"
 
         if hasattr(self.llm.config, "metric_scale_factor_projector_and_decoder") and self.llm.config.metric_scale_factor_projector_and_decoder:
             mprint("Loading metric scale factor projector and decoder from ckpt")
@@ -137,7 +124,7 @@ class LlavaMetaModel(ABC):
         self.is_loaded = True
 
         assert (
-            self.llm is not None or self.vision_tower is not None or self.mm_projector is not None or self.spatial_tower is not None or self.spatial_projector is not None
+            self.llm is not None or self.vision_tower is not None or self.mm_projector is not None or self.spatial_projector is not None
         ), "At least one of the components must be instantiated."
 
     @classmethod
@@ -165,16 +152,13 @@ class LlavaMetaModel(ABC):
             config.model_dtype = model_dtype
 
         cfgs = get_model_config(config)
-        if len(cfgs) == 5:
-            llm_cfg, vision_tower_cfg, mm_projector_cfg, spatial_tower_cfg, spatial_projector_cfg = cfgs
-        elif len(cfgs) == 4:
+        if len(cfgs) == 4:
             llm_cfg, vision_tower_cfg, mm_projector_cfg, spatial_projector_cfg = cfgs
-            spatial_tower_cfg = None
         elif len(cfgs) == 3:
             llm_cfg, vision_tower_cfg, mm_projector_cfg = cfgs
-            spatial_tower_cfg, spatial_projector_cfg = None, None
+            spatial_projector_cfg = None
         else:
-            raise ValueError("`llm_cfg` `mm_projector_cfg` `vision_tower_cfg` `spatial_tower_cfg` `spatial_projector_cfg` not found in the config.")
+            raise ValueError("`llm_cfg` `mm_projector_cfg` `vision_tower_cfg` `spatial_projector_cfg` not found in the config.")
 
         # print(llm_cfg, vision_tower_cfg, mm_projector_cfg); input("DEBUG load_pretrained")
         init_context = [
@@ -189,7 +173,7 @@ class LlavaMetaModel(ABC):
             vlm = cls(config, *args, **kwargs)
         # print(llm_cfg, vision_tower_cfg, mm_projector_cfg); input("DEBUG load_pretrained finish")
 
-        if hasattr(vlm, "llm") or hasattr(vlm, "vision_tower") or hasattr(vlm, "mm_projector") or hasattr(vlm, "spatial_tower") or hasattr(vlm, "spatial_projector"):
+        if hasattr(vlm, "llm") or hasattr(vlm, "vision_tower") or hasattr(vlm, "mm_projector") or hasattr(vlm, "spatial_projector"):
             if vlm.is_loaded:
                 return vlm
 
@@ -200,10 +184,8 @@ class LlavaMetaModel(ABC):
         # NOTE(Zhouenshen): Add spatial tower and projector
         if hasattr(config, "enable_spatial") and config.enable_spatial:
             # NOTE(Zhouenshen): Build spatial tower before building spatial projector and metric scale factor projector to update the config
-            vlm.spatial_tower = build_spatial_tower(spatial_tower_cfg, config)
             vlm.spatial_projector = build_mm_projector(spatial_projector_cfg, config)
         else:
-            vlm.spatial_tower = None
             vlm.spatial_projector = None
 
         self.post_config()
@@ -211,7 +193,7 @@ class LlavaMetaModel(ABC):
 
         # FIXME(ligeng, yunhao): llm should never be none here.
         assert (
-            vlm.llm is not None or vlm.vision_tower is not None or vlm.mm_projector is not None or vlm.spatial_tower is not None or vlm.spatial_projector is not None
+            vlm.llm is not None or vlm.vision_tower is not None or vlm.mm_projector is not None or vlm.spatial_projector is not None
         ), "At least one of the components must be instantiated."
         return vlm
 
@@ -279,23 +261,6 @@ class LlavaMetaModel(ABC):
             )
             self.config.spatial_projector_cfg = self.spatial_projector.config
 
-        if self.get_spatial_tower():
-            print(f"saving spatial_tower to {osp.join(output_dir, 'spatial_tower')}")
-            self.spatial_tower.config._name_or_path = osp.join(output_dir, "spatial_tower")
-            spatial_tower_state_dict = OrderedDict(
-                {k.split("spatial_tower.spatial_tower.")[-1]: v for k, v in state_dict.items() if "spatial_tower" in k}
-            )
-            self.spatial_tower.save_pretrained(
-                os.path.join(output_dir, "spatial_tower"),
-                state_dict=spatial_tower_state_dict,
-            )
-            # self.spatial_tower.image_processor.save_pretrained(os.path.join(output_dir, "spatial_tower"))
-            self.config.spatial_tower_cfg = self.spatial_tower.config
-            if hasattr(self.config.spatial_tower_cfg, "auto_map"):
-                if "radio" not in self.get_spatial_tower().__class__.__name__.lower():
-                    delattr(self.config.spatial_tower_cfg, "auto_map")
-
-
         # NOTE(Zhouenshen): Add depth for saving ckpt
         if hasattr(self.config, "enable_spatial") and self.config.enable_spatial:
             self.config.enable_depth = True
@@ -329,12 +294,6 @@ class LlavaMetaModel(ABC):
             mm_projector = mm_projector[0]
         return mm_projector
 
-    def get_spatial_tower(self):
-        spatial_tower = getattr(self, "spatial_tower", None)
-        if type(spatial_tower) is list:
-            spatial_tower = spatial_tower[0]
-        return spatial_tower
-
     def get_spatial_projector(self):
         spatial_projector = getattr(self, "spatial_projector", None)
         if type(spatial_projector) is list:
@@ -351,8 +310,6 @@ class LlavaMetaModel(ABC):
             self.config.vision_tower_cfg = self.vision_tower.config
         if getattr(self.config, "mm_projector_cfg", None) is None:
             self.config.mm_projector_cfg = self.mm_projector.config
-        if getattr(self.config, "spatial_tower_cfg", None) is None and self.spatial_tower is not None:
-            self.config.spatial_tower_cfg = self.spatial_tower.config
         if getattr(self.config, "spatial_projector_cfg", None) is None and self.spatial_projector is not None:
             self.config.spatial_projector_cfg = self.spatial_projector.config
 
@@ -370,8 +327,6 @@ class LlavaMetaModel(ABC):
                 self.get_mm_projector().eval()
             
             # NOTE(Zhouenshen): When spatial tower and projector are not used, we need to freeze them
-            if self.get_spatial_tower() and not getattr(self.config, "tune_spatial_tower", False):
-                self.get_spatial_tower().eval()
             if self.get_spatial_projector() and not getattr(self.config, "tune_spatial_projector", False):
                 self.get_spatial_projector().eval()
 
@@ -525,8 +480,8 @@ class LlavaMetaModel(ABC):
 
         # NOTE(Zhouenshen): images.shape: patch_num * 3 * patch_h * patch_w (14 * 3 * 448 * 448)
         if is_spatial and enable_spatial:
-            print(f"spatial image length: {len(images)}; image shape: {images[0].shape}")
-            image_features = self.get_spatial_tower()(images)
+            # NOTE(Zhouenshen): Use spatial features. (B, hidden, base_h * base_w + 1) -> (B, base_h * base_w + 1, hidden)
+            image_features = images.transpose(1, 2)
         else:
             image_features = self.get_vision_tower()(images)    # image_features.shape: patch_num * 1024 * 1152
 
@@ -1004,7 +959,7 @@ class LlavaMetaForCausalLM(ABC):
         # NOTE(Zhouenshen): For dynamic or dynamic_s2, edit the conversation to add the special tokens
         if self.config.image_aspect_ratio in ["dynamic", "dynamic_s2"]:
             for conv in conversation:
-                conv["value"] = process_rgbd_inference_conversation(conv["value"])
+                conv["value"] = process_rgbx_inference_conversation(conv["value"])
         
         for name in media:
             if name in ["image", "spatial"]:
@@ -1052,7 +1007,9 @@ class LlavaMetaForCausalLM(ABC):
                     if name == "image":
                         images, conversation[0]["value"] = dynamic_process_images_and_prompt(images=media["image"], prompt=conversation[0]["value"], data_args=self.config, image_folder=None)
                     else:
-                        images, conversation[0]["value"] = dynamic_process_images_and_prompt_for_spatial_encoder(images=media["spatial"], prompt=conversation[0]["value"], data_args=self.config, image_folder=None)
+                        # list of torch.tensor(1, hidden, base_h * base_w + 1) -> (B, hidden, base_h * base_w + 1)
+                        images = torch.cat(media['spatial'], dim=0)
+                        # images, conversation[0]["value"] = dynamic_process_images_and_prompt_for_spatial_encoder(images=media["spatial"], prompt=conversation[0]["value"], data_args=self.config, image_folder=None)
                     images = images.half()
                 # else:
                 #     if name == "image":

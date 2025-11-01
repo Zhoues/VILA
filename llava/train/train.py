@@ -651,20 +651,24 @@ def train():
     else:
         model.get_llm().requires_grad_(training_args.tune_language_model)
         mprint(f"Tunable parameters:\nlanguage model {training_args.tune_language_model}")
+
+        # NOTE(Zhouenshen): Always freeze metric scale factor decoder
+        if model.get_llm().get_metric_scale_factor_decoder():
+            model.get_llm().get_model().scale_head.requires_grad_(False)
+            model.get_llm().get_model().scale_adaptor.requires_grad_(False)
+            mprint(f"metric scale factor decoder {False}")
+
         if model.get_vision_tower():
             model.get_vision_tower().requires_grad_(training_args.tune_vision_tower)
             model.get_mm_projector().requires_grad_(training_args.tune_mm_projector)
             mprint(f"vision tower {training_args.tune_vision_tower}")
             mprint(f"mm projector {training_args.tune_mm_projector}")
-        if model.get_spatial_tower():
-            model.get_spatial_tower().requires_grad_(training_args.tune_spatial_tower)
-            mprint(f"spatial tower {training_args.tune_spatial_tower}")
         if model.get_spatial_projector():
             model.get_spatial_projector().requires_grad_(training_args.tune_spatial_projector)
             mprint(f"spatial projector {training_args.tune_spatial_projector}")
 
         if not any(
-            [training_args.tune_language_model, training_args.tune_vision_tower, training_args.tune_mm_projector, training_args.tune_spatial_tower, training_args.tune_spatial_projector]
+            [training_args.tune_language_model, training_args.tune_vision_tower, training_args.tune_mm_projector, training_args.tune_spatial_projector]
         ):
             logging.warning("You are not tuning any part of the model. Please check if this is intended.")
         else:

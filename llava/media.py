@@ -18,5 +18,6 @@ class Video(File):
     pass
 
 # NOTE(Zhouenshen): Spatial is a special file that contains spatial information
-class Spatial(File):
-    pass
+class Spatial:
+    def __init__(self, spatial_feature):
+        self.spatial_feature = spatial_feature

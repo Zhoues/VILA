@@ -101,11 +101,11 @@ def extract_media(
                     media["video"].append(_extract_video(part, config))
                 text += MEDIA_TOKENS["video"]
             # NOTE(Zhouenshen): Support spatial input
-            elif isinstance(part, (Spatial, PIL.Image.Image)):
+            elif isinstance(part, Spatial):
                 if draft:
-                    media["spatial"].append(part)
+                    media["spatial"].append(part.spatial_feature)
                 else:
-                    media["spatial"].append(_extract_image(part))
+                    media["spatial"].append(part.spatial_feature)
                 text += MEDIA_TOKENS["spatial"]
             else:
                 raise ValueError(f"Unsupported prompt part type: {type(part)}")

@@ -29,7 +29,7 @@ class Dataset:
     # NOTE(Zhouenshen): Add the depth path for spatialdataset
     depth_path: str = field(default=None, metadata={"help": "Path to the training depth data."})
     # NOTE(Zhouenshen): Add the enable_spatial flag for whether to use spatial encoder.
-    enable_spatial: bool = field(default=False, metadata={"help": "Whether to use spatial encoder."})
+    spatial_feature_path: str = field(default=None, metadata={"help": "Path to the training spatial feature data."})
 
     caption_choice: str = field(default=None, metadata={"help": "Path to the caption directory for recaption."})
     description: str = field(
@@ -61,384 +61,430 @@ def add_dataset(dataset):
 def register_datasets_mixtures():
 
     ### OpenImage (2D Dataset)
-    choice_qa_4M = Dataset(
-        dataset_name="choice_qa_4M",
+
+    reason_template_qa = Dataset(
+        dataset_name="reason_template_qa",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_choice_qa.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_template_qa_normalized_1000_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/positive",
-        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/train_depth",
-        enable_spatial=True,
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/2D_OpenImage/spatial_feature_only_image",
+    )
+    add_dataset(reason_template_qa)
+
+    reason_template_qa_RGB = Dataset(
+        dataset_name="reason_template_qa_RGB",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_template_qa_normalized_1000_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/positive",
+    )
+    add_dataset(reason_template_qa_RGB)
+
+
+    choice_qa = Dataset(
+        dataset_name="choice_qa",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_choice_qa_normalized_1000_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/positive",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/2D_OpenImage/spatial_feature_only_image",
         description="4 M SFT data w/ depth from OpenImage."
     )
-    add_dataset(choice_qa_4M)
+    add_dataset(choice_qa)
 
-    choice_qa_4M_RGB = Dataset(
-        dataset_name="choice_qa_4M_RGB",
+    choice_qa_RGB = Dataset(
+        dataset_name="choice_qa_RGB",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_choice_qa.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_choice_qa_normalized_1000_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/positive"
     )
-    add_dataset(choice_qa_4M_RGB)
+    add_dataset(choice_qa_RGB)
 
+    # ### CA-1M (3D Dataset)
 
-    reason_template_qa_5_9M = Dataset(
-        dataset_name="reason_template_qa_5_9M",
+    ca1m_reasoning_template_qa_split = Dataset(
+        dataset_name="ca1m_reasoning_template_qa_split",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_template_qa.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/positive",
-        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/train_depth",
-        enable_spatial=True,
-        description="5.9 M SFT data w/ depth from OpenImage."
-    )
-    add_dataset(reason_template_qa_5_9M)
-
-    reason_template_qa_5_9M_RGB = Dataset(
-        dataset_name="reason_template_qa_5_9M_RGB",
-        dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/osd_reasoning_template_qa.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/OpenImage/filter/train_20250307_211637_015_573_filter/positive"
-    )
-    add_dataset(reason_template_qa_5_9M_RGB)
-
-
-
-    ### CA-1M (3D Dataset)
-
-    ca1m_reasoning_template_qa_3_2M_split = Dataset(
-        dataset_name="ca1m_reasoning_template_qa_3_2M_split",
-        dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_reasoning_template_qa_split.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_reasoning_template_qa_normalized_1000_split_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
-        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths",    
-        enable_spatial=True,
-        description="3.3 M SFT data w/ depth from CA-1M."
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_only_image",
     )
-    add_dataset(ca1m_reasoning_template_qa_3_2M_split)
+    add_dataset(ca1m_reasoning_template_qa_split)
 
-    ca1m_reasoning_template_qa_3_2M_split_RGB = Dataset(
-        dataset_name="ca1m_reasoning_template_qa_3_2M_split_RGB",
+    ca1m_reasoning_template_qa_split_RGB = Dataset(
+        dataset_name="ca1m_reasoning_template_qa_split_RGB",
         dataset_type="geometricdataset",   
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_reasoning_template_qa_split.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_reasoning_template_qa_normalized_1000_split_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images"
     )
-    add_dataset(ca1m_reasoning_template_qa_3_2M_split_RGB)
+    add_dataset(ca1m_reasoning_template_qa_split_RGB)
+
+
+    ca1m_reasoning_template_qa_split_w_intrinsics = Dataset(
+        dataset_name="ca1m_reasoning_template_qa_split_w_intrinsics",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_reasoning_template_qa_normalized_1000_split_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_w_intrinsics",
+    )
+    add_dataset(ca1m_reasoning_template_qa_split_w_intrinsics)
+
+
+    ca1m_reasoning_template_qa_split_w_intrinsics_and_depth = Dataset(
+        dataset_name="ca1m_reasoning_template_qa_split_w_intrinsics_and_depth",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_reasoning_template_qa_normalized_1000_split_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_w_intrinsics_and_depth",
+    )
+    add_dataset(ca1m_reasoning_template_qa_split_w_intrinsics_and_depth)
+
+
+
+
+
+    # ca1m_template_qa_split = Dataset(
+    #     dataset_name="ca1m_template_qa_split",
+    #     dataset_type="geometricdataset",
+    #     data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_template_qa_normalized_1000_split_spatial_feature.json",
+    #     image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+    #     spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_only_image",
+    # )
+    # add_dataset(ca1m_template_qa_split)
+
+    # ca1m_template_qa_split_RGB = Dataset(
+    #     dataset_name="ca1m_template_qa_split_RGB",
+    #     dataset_type="geometricdataset",   
+    #     data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_template_qa_normalized_1000_split_spatial_feature.json",
+    #     image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images"
+    # )
+    # add_dataset(ca1m_template_qa_split_RGB)
+
+
+    # ca1m_template_qa_split_w_intrinsics = Dataset(
+    #     dataset_name="ca1m_template_qa_split_w_intrinsics",
+    #     dataset_type="geometricdataset",
+    #     data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_template_qa_normalized_1000_split_spatial_feature.json",
+    #     image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+    #     spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_w_intrinsics",
+    # )
+    # add_dataset(ca1m_template_qa_split_w_intrinsics)
+
+    # ca1m_template_qa_split_w_intrinsics_and_depth = Dataset(
+    #     dataset_name="ca1m_template_qa_split_w_intrinsics_and_depth",
+    #     dataset_type="geometricdataset",
+    #     data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_template_qa_normalized_1000_split_spatial_feature.json",
+    #     image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+    #     spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_w_intrinsics_and_depth",
+    # )
+    # add_dataset(ca1m_template_qa_split_w_intrinsics_and_depth)
     
     
 
-    ca1m_choice_qa_2_1M_split = Dataset(
-        dataset_name="ca1m_choice_qa_2_1M_split",
+    ca1m_choice_qa_split = Dataset(
+        dataset_name="ca1m_choice_qa_split",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_choice_qa_split.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/cubifyanything/ca1m_choice_qa_normalized_1000_split_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
-        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths", 
-        enable_spatial=True,
-        description="2.1 M SFT data w/ depth from CA-1M."
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_only_image",
     )
-    add_dataset(ca1m_choice_qa_2_1M_split)
+    add_dataset(ca1m_choice_qa_split)
 
 
-    ca1m_choice_qa_2_1M_split_RGB = Dataset(
-        dataset_name="ca1m_choice_qa_2_1M_split_RGB",
+    ca1m_choice_qa_split_RGB = Dataset(
+        dataset_name="ca1m_choice_qa_split_RGB",
         dataset_type="geometricdataset",   
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_choice_qa_split.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/cubifyanything/ca1m_choice_qa_normalized_1000_split_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images"
     )
-    add_dataset(ca1m_choice_qa_2_1M_split_RGB)
+    add_dataset(ca1m_choice_qa_split_RGB)
 
 
-    ca1m_visual_choice_qa_341k = Dataset(
-        dataset_name="ca1m_visual_choice_qa_341k",
+    ca1m_choice_qa_split_w_intrinsics = Dataset(
+        dataset_name="ca1m_choice_qa_split_w_intrinsics",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/cubifyanything/ca1m_choice_qa_normalized_1000_split_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_w_intrinsics",
+    )
+    add_dataset(ca1m_choice_qa_split_w_intrinsics)
+
+    ca1m_choice_qa_split_w_intrinsics_and_depth = Dataset(
+        dataset_name="ca1m_choice_qa_split_w_intrinsics_and_depth",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/cubifyanything/ca1m_choice_qa_normalized_1000_split_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_w_intrinsics_and_depth",
+    )
+    add_dataset(ca1m_choice_qa_split_w_intrinsics_and_depth)
+
+
+
+
+
+    ca1m_visual_choice_qa = Dataset(
+        dataset_name="ca1m_visual_choice_qa",
         dataset_type="geometricdataset",   
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_visual_choice_qa.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_visual_choice_qa_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/visual_choice_qa_images",
-        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths",
-        enable_spatial=True,
-        description="341k SFT data w/ depth from CA-1M."
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_only_image",
     )
-    add_dataset(ca1m_visual_choice_qa_341k)
+    add_dataset(ca1m_visual_choice_qa)
 
-    ca1m_visual_choice_qa_341k_RGB = Dataset(
-        dataset_name="ca1m_visual_choice_qa_341k_RGB",
+    ca1m_visual_choice_qa_RGB = Dataset(
+        dataset_name="ca1m_visual_choice_qa_RGB",
         dataset_type="geometricdataset",   
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_visual_choice_qa.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/visual_choice_qa_images"
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_visual_choice_qa_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/visual_choice_qa_images",
     )
-    add_dataset(ca1m_visual_choice_qa_341k_RGB)
+    add_dataset(ca1m_visual_choice_qa_RGB)
 
-    ca1m_vacant_qa_121k = Dataset(
-        dataset_name="ca1m_vacant_qa_121k",
+
+    ca1m_vacant_qa = Dataset(
+        dataset_name="ca1m_vacant_qa",
         dataset_type="geometricdataset",   
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa_normalized_1000_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
-        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths",    
-        enable_spatial=True,
-        description="121k SFT data w/ depth from CA-1M."    
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_only_image",
     )
-    add_dataset(ca1m_vacant_qa_121k)
+    add_dataset(ca1m_vacant_qa)
 
-    ca1m_vacant_qa_121k_RGB = Dataset(
-        dataset_name="ca1m_vacant_qa_121k_RGB",
+    ca1m_vacant_qa_RGB = Dataset(
+        dataset_name="ca1m_vacant_qa_RGB",
         dataset_type="geometricdataset",   
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa_normalized_1000_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images"
     )
-    add_dataset(ca1m_vacant_qa_121k_RGB)
+    add_dataset(ca1m_vacant_qa_RGB)
 
-
-    ca1m_vacant_qa_231k = Dataset(
-        dataset_name="ca1m_vacant_qa_231k",
+    ca1m_vacant_qa_intrinsics = Dataset(
+        dataset_name="ca1m_vacant_qa_intrinsics",
         dataset_type="geometricdataset",   
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa_v2.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa_normalized_1000_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
-        enable_spatial=True,
-        description="231k SFT data w/ depth from CA-1M."    
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_w_intrinsics",
     )
-    add_dataset(ca1m_vacant_qa_231k)
+    add_dataset(ca1m_vacant_qa_intrinsics)
 
-    ca1m_vacant_qa_231k_RGB = Dataset(
-        dataset_name="ca1m_vacant_qa_231k_RGB",
+    ca1m_vacant_qa_intrinsics_and_depth = Dataset(
+        dataset_name="ca1m_vacant_qa_intrinsics_and_depth",
         dataset_type="geometricdataset",   
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa_v2.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa_normalized_1000_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_w_intrinsics_and_depth",
+    )
+    add_dataset(ca1m_vacant_qa_intrinsics_and_depth)
+
+
+    ca1m_vacant_qa_3d = Dataset(
+        dataset_name="ca1m_vacant_qa_3d",
+        dataset_type="geometricdataset",   
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa_3d_normalized_1000_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_only_image",
+    )
+    add_dataset(ca1m_vacant_qa_3d)
+
+    ca1m_vacant_qa_3d_RGB = Dataset(
+        dataset_name="ca1m_vacant_qa_3d_RGB",
+        dataset_type="geometricdataset",   
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa_3d_normalized_1000_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images"
     )
-    add_dataset(ca1m_vacant_qa_231k_RGB)
+    add_dataset(ca1m_vacant_qa_3d_RGB)
 
-    ca1m_multi_view_qa_77k = Dataset(
-        dataset_name="ca1m_multi_view_qa_77k",
+    ca1m_vacant_qa_3d_intrinsics = Dataset(
+        dataset_name="ca1m_vacant_qa_3d_intrinsics",
         dataset_type="geometricdataset",   
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_multi_view_qa.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa_3d_normalized_1000_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_w_intrinsics",
+    )
+    add_dataset(ca1m_vacant_qa_3d_intrinsics)
+
+    ca1m_vacant_qa_3d_intrinsics_and_depth = Dataset(
+        dataset_name="ca1m_vacant_qa_3d_intrinsics_and_depth",
+        dataset_type="geometricdataset",   
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_vacant_qa_3d_normalized_1000_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_w_intrinsics_and_depth",
+    )
+    add_dataset(ca1m_vacant_qa_3d_intrinsics_and_depth)
+
+
+
+
+
+
+
+
+    ca1m_multi_view_qa = Dataset(
+        dataset_name="ca1m_multi_view_qa",
+        dataset_type="geometricdataset",   
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_multi_view_qa_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images_multi_view",
-        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/depths_multi_view",    
-        enable_spatial=True,
-        description="77k SFT data w/ depth from CA-1M."    
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_multi_view_only_image",
     )
-    add_dataset(ca1m_multi_view_qa_77k)
+    add_dataset(ca1m_multi_view_qa)
 
-    ca1m_multi_view_qa_77k_RGB = Dataset(
-        dataset_name="ca1m_multi_view_qa_77k_RGB",
+    ca1m_multi_view_qa_RGB = Dataset(
+        dataset_name="ca1m_multi_view_qa_RGB",
         dataset_type="geometricdataset",   
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_multi_view_qa.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_multi_view_qa_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images_multi_view"
     )
-    add_dataset(ca1m_multi_view_qa_77k_RGB)
+    add_dataset(ca1m_multi_view_qa_RGB)
 
-    ### Simulator (2D Dataset)
-    simulator_216k = Dataset(
-        dataset_name="simulator_216k",
+    # ### Simulator
+
+
+    simulator_blender = Dataset(
+        dataset_name="simulator_blender",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/metadata_split_10.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/metadata_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/images",
-        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/depths",
-        enable_spatial=True,
-        description="216k SFT data w/ depth from Simulator."
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/Sim_Blender/spatial_feature_only_image",
     )
-    add_dataset(simulator_216k)
+    add_dataset(simulator_blender)
 
-    simulator_216k_RGB = Dataset(
-        dataset_name="simulator_216k_RGB",
+    simulator_blender_RGB = Dataset(
+        dataset_name="simulator_blender_RGB",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/metadata_split_10.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/images"
-    )
-    add_dataset(simulator_216k_RGB)
-
-    simulator_246k = Dataset(
-        dataset_name="simulator_246k",
-        dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/metadata_new_split_10.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/metadata_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/images",
-        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/depths",
-        enable_spatial=True,
-        description="246k SFT data w/ depth from Simulator."
     )
-    add_dataset(simulator_246k)
-
-    simulator_246k_RGB = Dataset(
-        dataset_name="simulator_246k_RGB",
-        dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/metadata_new_split_10.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Simulator/images"
-    )
-    add_dataset(simulator_246k_RGB)
+    add_dataset(simulator_blender_RGB)
 
 
 
     ### RefCOCO (2D Dataset)
 
-    refcoco_1_2M = Dataset(
-        dataset_name="refcoco_1_2M",
+    refcoco = Dataset(
+        dataset_name="refcoco",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcoco/metadata.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcoco/metadata_normalized_1000_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014",
-        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014_depths",
-        enable_spatial=True,
-        description="1.2 M SFT data w/ depth from RefCOCO."
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/COCO/spatial_feature_only_image",
     )
-    add_dataset(refcoco_1_2M)
+    add_dataset(refcoco)
 
-    refcoco_1_2M_RGB = Dataset(
-        dataset_name="refcoco_1_2M_RGB",
+    refcoco_RGB = Dataset(
+        dataset_name="refcoco_RGB",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcoco/metadata.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcoco/metadata_normalized_1000_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014"
     )
-    add_dataset(refcoco_1_2M_RGB)
+    add_dataset(refcoco_RGB)
 
-    refcocop_1_2M = Dataset(
-        dataset_name="refcocop_1_2M",
+    refcocop = Dataset(
+        dataset_name="refcocop",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocop/metadata.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocop/metadata_normalized_1000_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014",
-        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014_depths",
-        enable_spatial=True,
-        description="1.2 M SFT data w/ depth from RefCOCOp."
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/COCO/spatial_feature_only_image",
     )
-    add_dataset(refcocop_1_2M)
+    add_dataset(refcocop)
 
-    refcocop_1_2M_RGB = Dataset(
-        dataset_name="refcocop_1_2M_RGB",
+    refcocop_RGB = Dataset(
+        dataset_name="refcocop_RGB",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocop/metadata.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocop/metadata_normalized_1000_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014"
     )
-    add_dataset(refcocop_1_2M_RGB)  
+    add_dataset(refcocop_RGB)  
 
-    refcocog_80k = Dataset(
-        dataset_name="refcocog_80k",
+    refcocog = Dataset(
+        dataset_name="refcocog",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocog/metadata.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocog/metadata_normalized_1000_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014", 
-        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014_depths",
-        enable_spatial=True,
-        description="80k SFT data w/ depth from RefCOCOg."
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/COCO/spatial_feature_only_image",
     )
-    add_dataset(refcocog_80k)
+    add_dataset(refcocog)
 
-    refcocog_80k_RGB = Dataset(
-        dataset_name="refcocog_80k_RGB",
+    refcocog_RGB = Dataset(
+        dataset_name="refcocog_RGB",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocog/metadata.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocog/metadata_normalized_1000_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014"
     )
-    add_dataset(refcocog_80k_RGB)
+    add_dataset(refcocog_RGB)
 
-    refcocog_80k = Dataset(
-        dataset_name="refcocog_80k",
+
+    ## SAT
+
+    sat = Dataset(
+        dataset_name="sat",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocog/metadata.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014", 
-        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014_depths",
-        enable_spatial=True,
-        description="80k SFT data w/ depth from RefCOCOg."
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/metadata_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/SAT/spatial_feature_multi_view_only_image",
     )
-    add_dataset(refcocog_80k)
+    add_dataset(sat)
 
-    refcocog_80k_RGB = Dataset(
-        dataset_name="refcocog_80k_RGB",
+    sat_RGB = Dataset(
+        dataset_name="sat_RGB",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/refcocog/metadata.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Detection/coco/train2014"
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/metadata_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images"
     )
-    add_dataset(refcocog_80k_RGB)
-
-
-    ### SAT (Dynamic 2D Dataset)
-
-    # sat_176k = Dataset(
-    #     dataset_name="sat_176k",
-    #     dataset_type="spatialdataset",
-    #     data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/metadata.json",
-    #     image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images",
-    #     depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/depths",
-    #     description="176k SFT data w/ depth from SAT."
-    # )
-    # add_dataset(sat_176k)
-
-    # sat_176k_RGB = Dataset(
-    #     dataset_name="sat_176k_RGB",
-    #     dataset_type="spatialdataset",
-    #     data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/metadata.json",
-    #     image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images"
-    # )
-    # add_dataset(sat_176k_RGB)
+    add_dataset(sat_RGB)
   
 
+    # ### EmbSpatial (Static 2D Dataset)
 
-
-    ### EmbSpatial (Static 2D Dataset)
-
-    embspatial_127k = Dataset(
-        dataset_name="embspatial_127k",
+    embspatial = Dataset(
+        dataset_name="embspatial",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/metadata.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/metadata_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/images",
-        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/depths",
-        enable_spatial=True,
-        description="127k SFT data w/ depth from EmbSpatial."
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/EmbSpatial/spatial_feature_only_image",
     )
-    add_dataset(embspatial_127k)
+    add_dataset(embspatial)
 
-    embspatial_127k_RGB = Dataset(
-        dataset_name="embspatial_127k_RGB",
+    embspatial_RGB = Dataset(
+        dataset_name="embspatial_RGB",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/metadata.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/metadata_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/images"
     )
-    add_dataset(embspatial_127k_RGB)    
+    add_dataset(embspatial_RGB)    
 
 
-    embspatial_12k_random = Dataset(
-        dataset_name="embspatial_12k_random",
+    embspatial_random = Dataset(
+        dataset_name="embspatial_random",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/metadata_random.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/images_random",
-        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/depths_random",
-        enable_spatial=True,
-        description="12k SFT data w/ depth from EmbSpatial."
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/metadata_random_90_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/images_random_90",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/EmbSpatial/spatial_feature_only_image_random_90",
     )
-    add_dataset(embspatial_12k_random)
+    add_dataset(embspatial_random)
 
-    embspatial_12k_random_RGB = Dataset(
-        dataset_name="embspatial_12k_random_RGB",
+    embspatial_random_RGB = Dataset(
+        dataset_name="embspatial_random_RGB",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/metadata_random.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/images_random"
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/metadata_random_90_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/EmbSpatial/images_random_90"
     )
-    add_dataset(embspatial_12k_random_RGB)
+    add_dataset(embspatial_random_RGB)
+
 
     blink_spatial_relation = Dataset(
         dataset_name="blink_spatial_relation",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/BLINK/metadata_Spatial_Relation.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/BLINK/metadata_Spatial_Relation_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/BLINK/images",
-        # depth_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/BLINK/depths",
-        enable_spatial=True,
-        description="572 SFT data w/ depth from BLINK."
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/BLINK/spatial_feature_only_image",
     )
     add_dataset(blink_spatial_relation)
 
     blink_spatial_relation_RGB = Dataset(
         dataset_name="blink_spatial_relation_RGB",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/BLINK/metadata_Spatial_Relation.json",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/BLINK/metadata_Spatial_Relation_spatial_feature.json",
         image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/BLINK/images"
     )
     add_dataset(blink_spatial_relation_RGB)
 
 
-
-    ### RefSpatial
-    refSpatial = Dataset(
-        dataset_name="refSpatial",
-        dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/RefSpatial/refspatial_new_sim.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/RefSpatial",
-        enable_spatial=True,
-        description="SFT data from RefSpatial."
-    )
-    add_dataset(refSpatial)
-
-    ### General QA (2D Dataset)
 
     llava_1_5_lrv_mix_965k = Dataset(
         dataset_name="llava_1_5_lrv_mix_965k",
@@ -448,67 +494,272 @@ def register_datasets_mixtures():
     )
     add_dataset(llava_1_5_lrv_mix_965k)
 
+    # sat_metric_factor_test = Dataset(
+    #     dataset_name="sat_metric_factor_test",
+    #     dataset_type="geometricdataset",
+    #     data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/metric_factor_test/metadata.json",
+    #     image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images",
+    #     enable_spatial=True,
+    # )
+    # add_dataset(sat_metric_factor_test)
 
-    ### final dataset
-    refspatial_old_placemennt_new_sim = Dataset(
-        dataset_name="refspatial_old_placemennt_new_sim",
-        dataset_type="spatialdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/RoboRefer_train_data/refspatial_old_placement_new_sim.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/RoboRefer_train_data",
-    )
-    add_dataset(refspatial_old_placemennt_new_sim)
+    # sat_metric_factor_test_RGB = Dataset(
+    #     dataset_name="sat_metric_factor_test_RGB",
+    #     dataset_type="geometricdataset",
+    #     data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/metric_factor_test/metadata.json",
+    #     image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images"
+    # )
+    # add_dataset(sat_metric_factor_test_RGB)
 
-
-    refspatial_old_placemennt_old_sim = Dataset(
-        dataset_name="refspatial_old_placemennt_old_sim",
-        dataset_type="spatialdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/RoboRefer_train_data/refspatial_old_placement_old_sim.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/RoboRefer_train_data",
-    )
-    add_dataset(refspatial_old_placemennt_old_sim)
-
-
-    human_qa_4k_RGB = Dataset(
-        dataset_name="human_qa_4k_RGB",
-        dataset_type="spatialdataset",   
-        data_path="/share/project/hanyi/dataset/synthetic_images_with_human/metadata.json",
-        image_path="/share/project/hanyi/dataset/synthetic_images_with_human/images_with_human"
-    )
-    add_dataset(human_qa_4k_RGB)
-
-
-    sat_176k = Dataset(
-        dataset_name="sat_176k",
+    ### DROID
+    DROID_w_image_RGB = Dataset(
+        dataset_name="DROID_w_image_RGB",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/metadata.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images",
-        enable_spatial=True,
-        description="176k SFT data w/ depth from SAT."
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/DROID/droid_trajectory_normalized_1000.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/DROID/images_640x360"
     )
-    add_dataset(sat_176k)
+    add_dataset(DROID_w_image_RGB)
 
-    sat_176k_RGB = Dataset(
-        dataset_name="sat_176k_RGB",
+    DROID_w_image = Dataset(
+        dataset_name="DROID_w_image",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/metadata.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images",
-        enable_spatial=True,
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/DROID/droid_trajectory_normalized_1000.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/DROID/images_640x360",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/DROID/spatial_feature_only_image",
+        description="70k SFT data from DROID."
     )
-    add_dataset(sat_176k_RGB)
+    add_dataset(DROID_w_image)
 
-    sat_metric_factor_test = Dataset(
-        dataset_name="sat_metric_factor_test",
+    DROID_w_image_intrinsics = Dataset(
+        dataset_name="DROID_w_image_intrinsics",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/metric_factor_test/metadata.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images",
-        enable_spatial=True,
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/DROID/droid_trajectory_normalized_1000.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/DROID/images_640x360",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/DROID/spatial_feature_w_intrinsics",
+        description="70k SFT data w/ intrinsics from DROID."
     )
-    add_dataset(sat_metric_factor_test)
+    add_dataset(DROID_w_image_intrinsics)
 
-    sat_metric_factor_test_RGB = Dataset(
-        dataset_name="sat_metric_factor_test_RGB",
+    DROID_w_image_intrinsics_and_depth = Dataset(
+        dataset_name="DROID_w_image_intrinsics_and_depth",
         dataset_type="geometricdataset",
-        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/metric_factor_test/metadata.json",
-        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/vlm/SAT/train/images"
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/DROID/droid_trajectory_normalized_1000.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/DROID/images_640x360",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/DROID/spatial_feature_w_intrinsics_and_depth",
+        description="70k SFT data w/ depth and intrinsics from DROID."
     )
-    add_dataset(sat_metric_factor_test_RGB)
+    add_dataset(DROID_w_image_intrinsics_and_depth)
+
+
+    ### ShareRobot
+    ShareRobot_w_image_RGB = Dataset(
+        dataset_name="ShareRobot_w_image_RGB",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/ShareRobot/sharerobot_trajectory_normalized_1000.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/ShareRobot/images"
+    )
+    add_dataset(ShareRobot_w_image_RGB)
+
+    ShareRobot_w_image = Dataset(
+        dataset_name="ShareRobot_w_image",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/ShareRobot/sharerobot_trajectory_normalized_1000.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/ShareRobot/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/ShareRobot/spatial_feature_only_image",
+        description="16k SFT data from ShareRobot."
+    )
+    add_dataset(ShareRobot_w_image)
+
+
+    ### CA-1M Traj
+    ca1m_traj_w_image_RGB = Dataset(
+        dataset_name="ca1m_traj_w_image_RGB",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_trajectory_qa_normalized_1000_split_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+    )
+    add_dataset(ca1m_traj_w_image_RGB)
+
+    ca1m_traj_w_image = Dataset(
+        dataset_name="ca1m_traj_w_image",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_trajectory_qa_normalized_1000_split_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_only_image",
+    )
+    add_dataset(ca1m_traj_w_image)
+
+    ca1m_traj_w_image_intrinsics = Dataset(
+        dataset_name="ca1m_traj_w_image_intrinsics",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_trajectory_qa_normalized_1000_split_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_w_intrinsics",
+    )
+    add_dataset(ca1m_traj_w_image_intrinsics)
+
+    ca1m_traj_w_image_intrinsics_and_depth = Dataset(
+        dataset_name="ca1m_traj_w_image_intrinsics_and_depth",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/ca1m_trajectory_qa_normalized_1000_split_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_w_intrinsics_and_depth",
+    )
+    add_dataset(ca1m_traj_w_image_intrinsics_and_depth)
+
+
+    ### AGIBOT Traj
+    agibot_traj_w_image_RGB = Dataset(
+        dataset_name="agibot_traj_w_image_RGB",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/AGIBOT/agibot_trajectory_normalized_1000.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/AGIBOT/images",
+    )
+    add_dataset(agibot_traj_w_image_RGB)
+
+    agibot_traj_w_image = Dataset(
+        dataset_name="agibot_traj_w_image",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/AGIBOT/agibot_trajectory_normalized_1000.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/AGIBOT/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/AGIBOT/spatial_feature_only_image",
+    )
+    add_dataset(agibot_traj_w_image)
+
+    agibot_traj_w_image_intrinsics = Dataset(
+        dataset_name="agibot_traj_w_image_intrinsics",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/AGIBOT/agibot_trajectory_normalized_1000.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/AGIBOT/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/AGIBOT/spatial_feature_w_intrinsics",
+    )
+    add_dataset(agibot_traj_w_image_intrinsics)
+
+
+
+    robotwin_w_image_RGB = Dataset(
+        dataset_name="robotwin_w_image_RGB",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/RoboTwin/robotwin_trajectory_normalized_1000.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/RoboTwin/images",
+    )
+    add_dataset(robotwin_w_image_RGB)
+
+    robotwin_w_image = Dataset(
+        dataset_name="robotwin_w_image",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/RoboTwin/robotwin_trajectory_normalized_1000.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/Traj/RoboTwin/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/RoboTwin/spatial_feature_only_image",
+    )
+    add_dataset(robotwin_w_image)
+
+    ### Scannet
+    ScanNet_reasoning_template_qa_split_RGB = Dataset(
+        dataset_name="ScanNet_reasoning_template_qa_split_RGB",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/scannet_reasoning_template_qa_normalized_1000_split.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/images"
+    )
+    add_dataset(ScanNet_reasoning_template_qa_split_RGB)
+
+    ScanNet_reasoning_template_qa_split = Dataset(
+        dataset_name="ScanNet_reasoning_template_qa_split",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/scannet_reasoning_template_qa_normalized_1000_split.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_ScanNet/spatial_feature_only_image",
+    )
+    add_dataset(ScanNet_reasoning_template_qa_split)
+
+    ScanNet_reasoning_template_qa_split_w_image_intrinsics = Dataset(
+        dataset_name="ScanNet_reasoning_template_qa_split_w_image_intrinsics",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/scannet_reasoning_template_qa_normalized_1000_split.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_ScanNet/spatial_feature_w_intrinsics",
+    )
+    add_dataset(ScanNet_reasoning_template_qa_split_w_image_intrinsics)
+
+    ScanNet_reasoning_template_qa_split_w_image_intrinsics_and_depth = Dataset(
+        dataset_name="ScanNet_reasoning_template_qa_split_w_image_intrinsics_and_depth",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/scannet_reasoning_template_qa_normalized_1000_split.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_ScanNet/spatial_feature_w_intrinsics_and_depth",
+    )
+    add_dataset(ScanNet_reasoning_template_qa_split_w_image_intrinsics_and_depth)
+
+
+
+
+    ScanNet_choice_qa_w_image_RGB = Dataset(
+        dataset_name="ScanNet_choice_qa_w_image_RGB",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/scannet_choice_qa_normalized_1000_split.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/images"
+    )
+    add_dataset(ScanNet_choice_qa_w_image_RGB)
+
+    ScanNet_choice_qa_w_image = Dataset(
+        dataset_name="ScanNet_choice_qa_w_image",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/scannet_choice_qa_normalized_1000_split.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_ScanNet/spatial_feature_only_image",
+    )
+    add_dataset(ScanNet_choice_qa_w_image)
+
+    ScanNet_choice_qa_w_image_intrinsics = Dataset(
+        dataset_name="ScanNet_choice_qa_w_image_intrinsics",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/scannet_choice_qa_normalized_1000_split.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_ScanNet/spatial_feature_w_intrinsics",
+    )
+    add_dataset(ScanNet_choice_qa_w_image_intrinsics)
+
+    ScanNet_choice_qa_w_image_intrinsics_and_depth = Dataset(
+        dataset_name="ScanNet_choice_qa_w_image_intrinsics_and_depth",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/scannet_choice_qa_normalized_1000_split.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_ScanNet/spatial_feature_w_intrinsics_and_depth",
+    )
+    add_dataset(ScanNet_choice_qa_w_image_intrinsics_and_depth)
+
+
+    ScanNet_traj_w_image_RGB = Dataset(
+        dataset_name="ScanNet_traj_w_image_RGB",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/scannet_trajectory_qa_normalized_1000_split.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/images",
+    )
+    add_dataset(ScanNet_traj_w_image_RGB)
+
+    ScanNet_traj_w_image = Dataset(
+        dataset_name="ScanNet_traj_w_image",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/scannet_trajectory_qa_normalized_1000_split.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_ScanNet/spatial_feature_only_image",
+    )
+    add_dataset(ScanNet_traj_w_image)
+
+    ScanNet_traj_w_image_intrinsics = Dataset(
+        dataset_name="ScanNet_traj_w_image_intrinsics",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/scannet_trajectory_qa_normalized_1000_split.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_ScanNet/spatial_feature_w_intrinsics",
+    )
+    add_dataset(ScanNet_traj_w_image_intrinsics)
+
+    ScanNet_traj_w_image_intrinsics_and_depth = Dataset(
+        dataset_name="ScanNet_traj_w_image_intrinsics_and_depth",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/scannet_trajectory_qa_normalized_1000_split.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/ScanNet_v2/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_ScanNet/spatial_feature_w_intrinsics_and_depth",
+    )
+    add_dataset(ScanNet_traj_w_image_intrinsics_and_depth)

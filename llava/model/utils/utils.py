@@ -23,7 +23,7 @@ from transformers import AutoConfig, PretrainedConfig
 
 
 def get_model_config(config):
-    default_keys = ["llm_cfg", "vision_tower_cfg", "mm_projector_cfg", "spatial_tower_cfg", "spatial_projector_cfg"]
+    default_keys = ["llm_cfg", "vision_tower_cfg", "mm_projector_cfg", "spatial_projector_cfg"]
 
     if hasattr(config, "_name_or_path") and len(config._name_or_path) >= 2:
         root_path = config._name_or_path

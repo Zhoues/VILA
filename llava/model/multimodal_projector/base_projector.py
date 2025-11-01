@@ -180,9 +180,9 @@ class MultimodalProjector(PreTrainedModel):
         elif mm_projector_type == "mlp_downsample_3x3_fix":
             self.layers = nn.Sequential()
 
-            # NOTE(Zhouenshen): When spatial_tower_vision_select_feature is "cls_patch", we need to reduce the hidden size (3601 or 1025) by 1
-            if mm_projector_cfg.spatial_tower_vision_select_feature is not None and mm_projector_cfg.spatial_tower_vision_select_feature == "cls_patch":
-                assert mm_projector_cfg.spatial_tower_vision_num_tokens != -1, "spatial_tower_vision_num_tokens must be set when spatial_tower_vision_select_feature is 'cls_patch'"
+            # NOTE(Zhouenshen): When spatial_tower_vision_select_feature is "scale_token_patch", we need to reduce the hidden size (3601 or 1025 or 1370) by 1
+            if mm_projector_cfg.spatial_tower_vision_select_feature is not None and mm_projector_cfg.spatial_tower_vision_select_feature == "scale_token_patch":
+                assert mm_projector_cfg.spatial_tower_vision_num_tokens != -1, "spatial_tower_vision_num_tokens must be set when spatial_tower_vision_select_feature is 'scale_token_patch'"
                 
                 self.layers.append(LearnableTokenReducer(token_num_out=mm_projector_cfg.spatial_tower_vision_num_tokens, token_dim=config.mm_hidden_size))
             
