@@ -113,7 +113,7 @@ def query():
                 depth_z_list.append(depth_z)
         
         if intrinsics is not None:
-            intrinsics = np.array(intrinsics)
+            intrinsics = np.array(intrinsics)[:3, :3]
 
         views = []
         for idx, image in enumerate(image_list):
