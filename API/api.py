@@ -124,7 +124,7 @@ def query():
             if intrinsics is not None:
                 view["intrinsics"] = torch.tensor(intrinsics, dtype=torch.float32)
             if depth_z_paths is not None:
-                view["depth_z"] = torch.tensor(depth_z_list[idx], dtype=torch.float32)
+                view["depth_z"] = torch.tensor(depth_z_list[idx], dtype=torch.float32) / 1000.0
             views.append(view)
 
         views = preprocess_inputs(views, resize_mode="square", size=518)
