@@ -217,6 +217,42 @@ def register_datasets_mixtures():
     add_dataset(ca1m_choice_qa_split_w_intrinsics_and_depth)
 
 
+    ca1m_distance_qa_split = Dataset(
+        dataset_name="ca1m_distance_qa_split",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/cubifyanything/ca1m_distance_qa_normalized_1000_split_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_only_image",
+    )
+    add_dataset(ca1m_distance_qa_split)
+
+
+    ca1m_distance_qa_split_RGB = Dataset(
+        dataset_name="ca1m_distance_qa_split_RGB",
+        dataset_type="geometricdataset",   
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/cubifyanything/ca1m_distance_qa_normalized_1000_split_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images"
+    )
+    add_dataset(ca1m_distance_qa_split_RGB)
+
+
+    ca1m_distance_qa_split_w_intrinsics = Dataset(
+        dataset_name="ca1m_distance_qa_split_w_intrinsics",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/cubifyanything/ca1m_distance_qa_normalized_1000_split_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_w_intrinsics",
+    )
+    add_dataset(ca1m_distance_qa_split_w_intrinsics)
+
+    ca1m_distance_qa_split_w_intrinsics_and_depth = Dataset(
+        dataset_name="ca1m_distance_qa_split_w_intrinsics_and_depth",
+        dataset_type="geometricdataset",
+        data_path="/share/project/emllm_mnt.1d/sfs/baaiei/cubifyanything/ca1m_distance_qa_normalized_1000_split_spatial_feature.json",
+        image_path="/share/project/emllm_mnt.1d/sfs/baaiei/zhouenshen/dataset/3D/cubifyanything/images",
+        spatial_feature_path="/share/project/emllm_mnt.1d/sfs/baaiei/exact_spatial_feature/3D_CA1M/spatial_feature_w_intrinsics_and_depth",
+    )
+    add_dataset(ca1m_distance_qa_split_w_intrinsics_and_depth)
 
 
 

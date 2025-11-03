@@ -131,17 +131,24 @@ python use_api_mapanything.py \
     --url http://127.0.0.1:25548
 
 python use_api_mapanything.py \
-    --image_path "/share/project/zhouenshen/sfs/dataset/3D/cubifyanything/filter_step_20/42445697/62689403776666/wide/image.png" \
-    --prompt "Place the left lamp to the left of the bed." \
+    --image_path "/share/project/zhouenshen/hpfs/code/benchmark/result/VisualTraceBench/saved_images/TraceSpatial_images/50.png" \
+    --prompt "Please predict 2D object-centric waypoints to complete the task successfully. The task is \"Pick up the the lid of the red pot to the far front side of the the rightmost red object\"." \
     --enable_spatial 1 \
     --output_path our_result.jpg \
-    --url http://127.0.0.1:25548
+    --url http://127.0.0.1:25547
 
     42445697/62691302989875
+
+
+Please predict 2D object-centric waypoints to complete the task successfully. The task is \"pick up the lid of the red pot, and move it to the front of the rightmost red object\".
 
 pick up the black controler at right which is on the white table and place it into the corner of the white table which is closest to the black chair on the left.
 
 Place the black controler at right which is on the white table to the left of the corner of the white table which is closest to the black chair.
+
+pick up the lid of the red pot, and move it to the front of the rightmost red object.
+
+Pick up the the lid of the red pot to the front side of the the rightmost red object.
 """
 
 
@@ -158,8 +165,10 @@ def main():
 
     args = parser.parse_args()
 
-    suffix = " Your answer should be formatted as a list of tuples, i.e., [(x1, y1, d1), (x2, y2, d2), ...], where each tuple contains the x and y coordinates and the depth of the point."
-    # suffix = " Your answer should be formatted as a list of tuples, i.e., [(x1, y1), (x2, y2), ...], where each tuple contains the x and y coordinates of a point."
+    # 3D 尾缀
+    # suffix = " Your answer should be formatted as a list of tuples, i.e., [(x1, y1, d1), (x2, y2, d2), ...], where each tuple contains the x and y coordinates and the depth of the point."
+    # 2D 尾缀
+    suffix = " Your answer should be formatted as a list of tuples, i.e., [(x1, y1), (x2, y2), ...], where each tuple contains the x and y coordinates of a point."
     
     test_image_paths = [args.image_path]
 

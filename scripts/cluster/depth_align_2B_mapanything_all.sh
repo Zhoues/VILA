@@ -6,7 +6,7 @@ conda activate /share/project/zhouenshen/miniconda3/envs/vila
 export PYTHONPATH=$(pwd)
 export WANDB_MODE=offline
 
-export BASE_RUN_NAME="MapAnything-align-v2"
+export BASE_RUN_NAME="MapAnything-align-v3"
 export STAGE_PATH=/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-MapAnything
 export VISION_TOWER=/share/project/zhouenshen/hpfs/ckpt/vlm/paligemma-siglip-so400m-patch14-448
 export SPATIAL_TOWER=/share/project/zhouenshen/hpfs/ckpt/mapanything/map-anything
@@ -24,6 +24,10 @@ datasets=(
     ca1m_choice_qa_split
     ca1m_choice_qa_split_w_intrinsics
     ca1m_choice_qa_split_w_intrinsics_and_depth
+
+    ca1m_distance_qa_split
+    ca1m_distance_qa_split_w_intrinsics
+    ca1m_distance_qa_split_w_intrinsics_and_depth
 
     ScanNet_reasoning_template_qa_split
     ScanNet_reasoning_template_qa_split_w_image_intrinsics

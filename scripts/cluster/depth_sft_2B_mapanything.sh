@@ -7,9 +7,9 @@ export PYTHONPATH=$(pwd)
 export WANDB_MODE=offline
 
 # export BASE_RUN_NAME="depth-sft-old_placement+old_simulator-use_v2_align"
-export BASE_RUN_NAME="MapAnything-3d-sft-partial"
+export BASE_RUN_NAME="MapAnything-only-geo"
 # export BASE_RUN_NAME="test"
-export STAGE_PATH=/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-MapAnything-3d-align-partial/model
+export STAGE_PATH=/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-MapAnything-align-v3/model
 export VISION_TOWER=/share/project/zhouenshen/hpfs/ckpt/vlm/paligemma-siglip-so400m-patch14-448
 export SPATIAL_TOWER=/share/project/zhouenshen/hpfs/ckpt/mapanything/map-anything
 
@@ -20,8 +20,25 @@ export SPATIAL_TOWER=/share/project/zhouenshen/hpfs/ckpt/mapanything/map-anythin
 # export DATA_MIXTURE="ScanNet_w_image_RGB+ScanNet_w_image+ScanNet_w_image_intrinsics+ScanNet_w_image_intrinsics_and_depth+ca1m_template_qa_split_RGB+ca1m_template_qa_split+ca1m_template_qa_split_w_intrinsics+ca1m_template_qa_split_w_intrinsics_and_depth"
 # export DATA_MIXTURE="ca1m_reasoning_template_qa_3_2M_split_RGB+ca1m_reasoning_template_qa_3_2M_split+ca1m_reasoning_template_qa_3_2M_split_w_intrinsics+ca1m_reasoning_template_qa_3_2M_split_w_intrinsics_and_depth"
 # export DATA_MIXTURE="ca1m_template_qa_split_RGB+ca1m_template_qa_split+ca1m_template_qa_split_w_intrinsics+ca1m_template_qa_split_w_intrinsics_and_depth"
-export DATA_MIXTURE="ScanNet_w_image_RGB+ScanNet_w_image+ScanNet_w_image_intrinsics+ScanNet_w_image_intrinsics_and_depth+ca1m_template_qa_split_RGB+ca1m_template_qa_split+ca1m_template_qa_split_w_intrinsics+ca1m_template_qa_split_w_intrinsics_and_depth+DROID_w_image_RGB+DROID_w_image+DROID_w_image_intrinsics+DROID_w_image_intrinsics_and_depth+ShareRobot_w_image_RGB+ShareRobot_w_image+ca1m_traj_w_image_RGB+ca1m_traj_w_image+ca1m_traj_w_image_intrinsics+ca1m_traj_w_image_intrinsics_and_depth+agibot_traj_w_image_RGB+agibot_traj_w_image+agibot_traj_w_image_intrinsics+ca1m_vacant_qa_RGB+ca1m_vacant_qa+ca1m_vacant_qa_intrinsics+ca1m_vacant_qa_intrinsics_and_depth"
 
+datasets=(
+    ca1m_reasoning_template_qa_split
+    ca1m_reasoning_template_qa_split_RGB
+    ca1m_reasoning_template_qa_split_w_intrinsics
+    ca1m_reasoning_template_qa_split_w_intrinsics_and_depth
+
+    ScanNet_reasoning_template_qa_split
+    ScanNet_reasoning_template_qa_split_RGB
+    ScanNet_reasoning_template_qa_split_w_image_intrinsics
+    ScanNet_reasoning_template_qa_split_w_image_intrinsics_and_depth
+)
+
+
+filtered=()
+for x in "${datasets[@]}"; do
+  [[ -n "$x" ]] && filtered+=("$x")
+done
+export DATA_MIXTURE=$(IFS=+; echo "${filtered[*]}")
 
 export OUTPUT_DIR=/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-${BASE_RUN_NAME}
 mkdir -p $OUTPUT_DIR

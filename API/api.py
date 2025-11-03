@@ -97,7 +97,7 @@ def query():
         else:
             raise ValueError(f"Unsupported media type: {img_f}")
 
-    if enable_spatial == 1 and (depth_z_paths is not None or intrinsics is not None):
+    if enable_spatial == 1:
         if depth_z_paths is not None:
             assert len(depth_z_paths) == len(image_paths), "Depth z paths length must be equal to image paths length"
 
@@ -118,12 +118,12 @@ def query():
         views = []
         for idx, image in enumerate(image_list):
             view = {
-                "img": image,
+                "img": image[:, :, :3], # (H, W, 4) -> (H, W, 3)
                 "is_metric_scale": torch.tensor([True]),
             }
             if intrinsics is not None:
                 view["intrinsics"] = torch.tensor(intrinsics, dtype=torch.float32)
-            if depth_z_list is not None:
+            if depth_z_paths is not None:
                 view["depth_z"] = torch.tensor(depth_z_list[idx], dtype=torch.float32)
             views.append(view)
 
@@ -146,7 +146,8 @@ def query():
             scale = prediction["scale_token"] # (1, hidden, 1)
             concat = torch.cat([spatial, scale], dim=-1) # (1, hidden, base_h * base_w + 1)
             prompt.append(Spatial(spatial_feature=concat))
-    
+        
+        print(f"Generate Spatial Features Successfully!")
 
     if text:
         prompt.append(text)
@@ -170,6 +171,6 @@ def query():
 # 如果仅在脚本方式运行，则启动 Flask
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--port", type=int, default=25547)
+    parser.add_argument("--port", type=int, default=25554)
     args = parser.parse_args()
     app.run(host='0.0.0.0', port=args.port)

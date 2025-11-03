@@ -6,8 +6,8 @@ conda activate /share/project/zhouenshen/miniconda3/envs/vila
 export PYTHONPATH=$(pwd)
 export WANDB_MODE=offline
 
-export BASE_RUN_NAME="MapAnything-sft-v2"
-export STAGE_PATH=/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-MapAnything-align-v2/model
+export BASE_RUN_NAME="MapAnything-sft-v3"
+export STAGE_PATH=/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-MapAnything-align-v3/model
 export VISION_TOWER=/share/project/zhouenshen/hpfs/ckpt/vlm/paligemma-siglip-so400m-patch14-448
 export SPATIAL_TOWER=/share/project/zhouenshen/hpfs/ckpt/mapanything/map-anything
 export OUTPUT_DIR=/share/project/zhouenshen/hpfs/code/VILA/runs/train/NVILA-Lite-2B-${BASE_RUN_NAME}
@@ -107,60 +107,74 @@ datasets=(
     choice_qa
 
     ca1m_reasoning_template_qa_split
-    ca1m_reasoning_template_qa_split_w_intrinsics
+    ca1m_reasoning_template_qa_split_RGB
     ca1m_reasoning_template_qa_split_w_intrinsics_and_depth
     ca1m_choice_qa_split
-    ca1m_choice_qa_split_w_intrinsics
+    ca1m_choice_qa_split_RGB
     ca1m_choice_qa_split_w_intrinsics_and_depth
 
+    ca1m_distance_qa_split
+    ca1m_distance_qa_split_RGB
+    ca1m_distance_qa_split_w_intrinsics
+    ca1m_distance_qa_split_w_intrinsics_and_depth
+
     ScanNet_reasoning_template_qa_split
-    ScanNet_reasoning_template_qa_split_w_image_intrinsics
+    ScanNet_reasoning_template_qa_split_RGB
     ScanNet_reasoning_template_qa_split_w_image_intrinsics_and_depth
     ScanNet_choice_qa_w_image
-    ScanNet_choice_qa_w_image_intrinsics
+    ScanNet_choice_qa_w_image_RGB
     ScanNet_choice_qa_w_image_intrinsics_and_depth
 
     ca1m_visual_choice_qa
+    ca1m_visual_choice_qa_RGB
     ca1m_multi_view_qa
+    ca1m_multi_view_qa_RGB
 
     ca1m_vacant_qa
+    ca1m_vacant_qa_RGB
     ca1m_vacant_qa_intrinsics
     ca1m_vacant_qa_intrinsics_and_depth
     ca1m_vacant_qa_3d
+    ca1m_vacant_qa_3d_RGB
     ca1m_vacant_qa_3d_intrinsics
     ca1m_vacant_qa_3d_intrinsics_and_depth
 
     simulator_blender
-    simulator_blender
+    simulator_blender_RGB
 
     refcoco
     refcocop
     refcocog
 
     sat
+    sat_RGB
     embspatial
     embspatial_random
+    embspatial_random_RGB
     embspatial_random
+    embspatial_random_RGB
     blink_spatial_relation
+    blink_spatial_relation_RGB
     blink_spatial_relation
+    blink_spatial_relation_RGB
     llava_1_5_lrv_mix_965k
 
     DROID_w_image
-    DROID_w_image_intrinsics
+    DROID_w_image_RGB
     DROID_w_image_intrinsics_and_depth
     ShareRobot_w_image
     ShareRobot_w_image_RGB
     ShareRobot_w_image
     ShareRobot_w_image_RGB
     ca1m_traj_w_image
-    ca1m_traj_w_image_intrinsics
+    ca1m_traj_w_image_RGB
     ca1m_traj_w_image_intrinsics_and_depth
     agibot_traj_w_image
-    agibot_traj_w_image_intrinsics
+    agibot_traj_w_image_RGB
     robotwin_w_image
     robotwin_w_image_RGB
     ScanNet_traj_w_image
-    ScanNet_traj_w_image_intrinsics
+    ScanNet_traj_w_image_RGB
     ScanNet_traj_w_image_intrinsics_and_depth
 )
 
@@ -175,7 +189,7 @@ export DATA_MIXTURE=$(IFS=+; echo "${filtered[*]}")
 # training config
 export GPUS_PER_NODE=8
 export PER_DEVICE_TRAIN_BATCH_SIZE=6
-export GRADIENT_ACCUMULATION_STEPS=1
+export GRADIENT_ACCUMULATION_STEPS=2
 export MASTER_PORT=25190
 
 # network config
